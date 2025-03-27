@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #000000;
+  color: #ffffff;
+  font-family: 'Montserrat', sans-serif;
+}
+
+.btn-yellow {
+  @apply bg-yellow-500 text-black font-bold py-2 px-4 rounded hover:bg-yellow-600;
+}
+
+.sidebar {
+  @apply bg-gray-900 w-64 h-screen fixed top-0 left-0 p-4;
+}
+
+.main-content {
+  @apply ml-64 p-8;
+}
+
+.table {
+  @apply w-full border-collapse;
+}
+
+.table th, .table td {
+  @apply border border-gray-700 p-2;
+}
+
+.table th {
+  @apply bg-gray-800;
+}
