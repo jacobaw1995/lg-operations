@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { supabase } from '../../lib/supabase';
@@ -96,24 +96,48 @@ export default function Projects() {
     }
   };
 
-  const handleDragEnd = async (event: any) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
-    if (!over) return;
+    if (!over || active.id === over.id) return;
 
     const activeTask = tasks.find((task) => task.id === active.id);
-    const overColumn = over.id.toString().split('-')[0]; // e.g., "To Do-column" -> "To Do"
+    const overIdString = over.id.toString();
+    const overColumn = overIdString.split('-')[0]; // e.g., "To Do-column" -> "To Do"
 
-    if (activeTask && overColumn) {
-      const updatedTask = { ...activeTask, status: overColumn };
-      const { error } = await supabase
-        .from('tasks')
-        .update({ status: updatedTask.status })
-        .eq('id', activeTask.id);
-      if (error) {
-        console.error(error);
+    if (activeTask) {
+      // Check if dragged within the same column (sorting) or to a new column (status change)
+      const isSameColumn = activeTask.status === overColumn;
+      const columnTasks = tasks.filter((task) => task.status === activeTask.status);
+
+      if (isSameColumn) {
+        // Sorting within the same column
+        const oldIndex = columnTasks.findIndex((task) => task.id === active.id);
+        const newIndex = columnTasks.findIndex((task) => task.id === over.id);
+        if (oldIndex !== newIndex) {
+          const newColumnTasks = arrayMove(columnTasks, oldIndex, newIndex);
+          const updatedTasks = tasks.map((task) =>
+            task.status === activeTask.status
+              ? newColumnTasks.find((t) => t.id === task.id) || task
+              : task
+          );
+          setTasks(updatedTasks);
+
+          // Optionally sync with Supabase if you want to persist the order
+          // This would require an 'order' column in your tasks table
+        }
       } else {
-        fetchTasks();
+        // Moving to a different column (status change)
+        const updatedTask = { ...activeTask, status: overColumn };
+        const { error } = await supabase
+          .from('tasks')
+          .update({ status: updatedTask.status })
+          .eq('id', activeTask.id);
+        if (error) {
+          console.error(error);
+        } else {
+          fetchTasks();
+        }
       }
     }
   };
