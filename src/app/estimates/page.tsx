@@ -105,7 +105,7 @@ export default function Estimates() {
     setNewEstimate({ ...newEstimate, asphalt_thickness: thickness, cost });
   };
 
-  const validateForm = (estimate: { project_name: string; customer_id: string; description: string; squareFootage?: number; asphalt_thickness?: string }) => {
+  const validateForm = (estimate: { project_name: string; customer_id: string | number; description: string; squareFootage?: number; asphalt_thickness?: string }) => {
     if (!estimate.project_name || !estimate.customer_id || !estimate.description) {
       setError('All fields are required.');
       return false;
@@ -126,7 +126,7 @@ export default function Estimates() {
     setLoading(true);
     const { error } = await supabase.from('estimates').insert([{
       ...newEstimate,
-      customer_id: parseInt(newEstimate.customer_id),
+      customer_id: parseInt(newEstimate.customer_id), // Convert to number for Supabase
       cost: parseFloat(newEstimate.cost.toString()),
       square_footage: newEstimate.squareFootage,
     }]);
@@ -151,9 +151,9 @@ export default function Estimates() {
       .from('estimates')
       .update({
         ...editEstimate,
-        customer_id: parseInt(editEstimate.customer_id.toString()),
+        customer_id: parseInt(editEstimate.customer_id.toString()), // Ensure it's a number
         cost: parseFloat(editEstimate.cost.toString()),
-        square_footage: editEstimate.squareFootage ?? 0, // Ensure squareFootage is a number
+        square_footage: editEstimate.squareFootage ?? 0,
       })
       .eq('id', editEstimate.id);
     if (error) {
@@ -300,7 +300,7 @@ export default function Estimates() {
               <input
                 type="number"
                 placeholder="Square Footage"
-                value={editEstimate.squareFootage ?? 0} // Default to 0 if undefined
+                value={editEstimate.squareFootage ?? 0}
                 onChange={(e) => {
                   const squareFootage = parseFloat(e.target.value) || 0;
                   const cost = calculateCost(squareFootage, editEstimate.asphalt_thickness || '2');
