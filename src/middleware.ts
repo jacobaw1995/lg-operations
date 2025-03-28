@@ -7,12 +7,10 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
-
-  const accessToken = request.cookies.get('sb-access-token')?.value;
-  if (!accessToken && request.nextUrl.pathname !== '/') {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session && request.nextUrl.pathname !== '/') {
     return NextResponse.redirect(new URL('/', request.url));
   }
-
   return NextResponse.next();
 }
 
