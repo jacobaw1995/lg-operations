@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react'; // Removed unused useState import
 import { useRouter, useSearchParams } from 'next/navigation';
 
 type Project = {
