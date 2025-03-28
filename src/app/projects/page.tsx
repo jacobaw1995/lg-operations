@@ -1,12 +1,11 @@
+'use client';
+
 import { useState, useEffect, useCallback } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { supabase } from '../../lib/supabase';
 import ProjectSelector from './ProjectSelector';
-
-// Force dynamic rendering to avoid prerendering issues
-export const dynamic = 'force-dynamic';
 
 type Task = {
   id: number;
