@@ -1,16 +1,12 @@
-'use client';
-
 import { useState, useEffect, useCallback } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { supabase } from '../../lib/supabase';
-import { useRouter, useSearchParams } from 'next/navigation';
+import ProjectSelector from './ProjectSelector';
 
-// Force dynamic rendering to avoid prerendering issues with useSearchParams
+// Force dynamic rendering to avoid prerendering issues
 export const dynamic = 'force-dynamic';
-export const revalidate = 0; // Disable revalidation (caching) to ensure dynamic rendering
-export const dynamicParams = true; // Ensure dynamic params are handled at request time
 
 type Task = {
   id: number;
@@ -88,7 +84,6 @@ function SortableTask({
 
 export default function Projects() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const searchParams = useSearchParams();
   const [selectedProject, setSelectedProject] = useState<number | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newProject, setNewProject] = useState({ name: '' });
@@ -97,7 +92,6 @@ export default function Projects() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const router = useRouter();
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -115,17 +109,9 @@ export default function Projects() {
       console.error('Fetch Projects Error:', error);
     } else {
       setProjects(data || []);
-      const selected = searchParams.get('selected');
-      if (data && data.length > 0) {
-        if (selected && data.some((p) => p.id === parseInt(selected))) {
-          setSelectedProject(parseInt(selected));
-        } else {
-          setSelectedProject(data[0].id);
-        }
-      }
     }
     setLoading(false);
-  }, [searchParams]);
+  }, []);
 
   const fetchTasks = useCallback(async () => {
     if (!selectedProject) return;
@@ -283,24 +269,11 @@ export default function Projects() {
           </button>
         </div>
       </form>
-      <div className="mb-8">
-        <select
-          value={selectedProject || ''}
-          onChange={(e) => {
-            const value = parseInt(e.target.value);
-            setSelectedProject(value);
-            router.push(`/projects?selected=${value}`);
-          }}
-          className="p-2 rounded bg-gray-700 text-white w-full"
-        >
-          <option value="">Select Project</option>
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      <ProjectSelector
+        projects={projects}
+        selectedProject={selectedProject}
+        setSelectedProject={setSelectedProject}
+      />
       {selectedProject && (
         <>
           <form onSubmit={handleAddTask} className="mb-8 bg-gray-800 p-6 rounded-lg">
