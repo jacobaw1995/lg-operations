@@ -1,6 +1,11 @@
+'use client';
+
 import './globals.css';
 import { Inter } from 'next/font/google';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { supabase } from '../lib/supabase';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -14,6 +19,13 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/');
+  };
+
   return (
     <html lang="en">
       <body className={inter.className}>
@@ -42,10 +54,22 @@ export default function RootLayout({
                     Projects
                   </Link>
                 </li>
+                <li className="mb-4">
+                  <button
+                    onClick={handleLogout}
+                    className="text-white hover:text-yellow-500"
+                  >
+                    Logout
+                  </button>
+                </li>
               </ul>
             </nav>
           </div>
-          <div className="main-content">{children}</div>
+          <div className="main-content">
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
+          </div>
         </div>
       </body>
     </html>
