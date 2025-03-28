@@ -3,12 +3,16 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+// Define storage conditionally
+const isBrowser = typeof window !== 'undefined';
+const storage = isBrowser ? localStorage : undefined;
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: true,         // Ensure session is persisted
-    autoRefreshToken: true,       // Refresh tokens automatically
-    detectSessionInUrl: false,    // No OAuth redirects in this app
-    storage: localStorage,        // Use localStorage for session data
-    storageKey: 'sb-auth-token'   // Custom key for storage
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: false,
+    storage,              // Use conditional storage
+    storageKey: 'sb-auth-token'
   }
 });
