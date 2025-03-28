@@ -1,15 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { supabase } from '../../lib/supabase';
 import ProjectSelector from './ProjectSelector';
 
-// Force dynamic rendering to avoid prerendering issues with useSearchParams in ProjectSelector
-export const dynamic = 'force-dynamic';
-
+// Rest of your existing imports and type definitions remain unchanged
 type Task = {
   id: number;
   project_id: number;
@@ -24,7 +22,7 @@ type Project = {
   name: string;
 };
 
-// Modal Component
+// Modal and SortableTask components remain unchanged
 function Modal({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: React.ReactNode }) {
   if (!isOpen) return null;
 
@@ -271,11 +269,13 @@ export default function Projects() {
           </button>
         </div>
       </form>
-      <ProjectSelector
-        projects={projects}
-        selectedProject={selectedProject}
-        setSelectedProject={setSelectedProject}
-      />
+      <Suspense fallback={<div>Loading projects...</div>}>
+        <ProjectSelector
+          projects={projects}
+          selectedProject={selectedProject}
+          setSelectedProject={setSelectedProject}
+        />
+      </Suspense>
       {selectedProject && (
         <>
           <form onSubmit={handleAddTask} className="mb-8 bg-gray-800 p-6 rounded-lg">
