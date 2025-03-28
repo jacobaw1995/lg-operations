@@ -174,6 +174,7 @@ export default function Projects() {
           </button>
         </div>
       </form>
+      <h2 className="text-2xl font-bold mb-4">Sample Project</h2> {/* Added static project name header */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-3 gap-4">
           {Object.keys(columns).map((column) => (

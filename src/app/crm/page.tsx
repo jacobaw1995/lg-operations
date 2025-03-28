@@ -18,10 +18,31 @@ export default function CRM() {
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
 
   const fetchCustomers = useCallback(async () => {
+    // Check if the table is empty
+    const { data: existingCustomers, error: fetchError } = await supabase.from('customers').select('*');
+    if (fetchError) {
+      console.error('Fetch Error:', fetchError);
+      return;
+    }
+
+    // If no customers exist, insert dummy data
+    if (!existingCustomers || existingCustomers.length === 0) {
+      const dummyCustomers = [
+        { name: 'John Doe', email: 'john.doe@example.com', phone: '1234567890', status: 'Lead', tags: 'Residential' },
+        { name: 'Jane Smith', email: 'jane.smith@example.com', phone: '0987654321', status: 'Pending', tags: 'Commercial' },
+        { name: 'Acme Corp', email: 'contact@acmecorp.com', phone: '5551234567', status: 'Sold', tags: 'Parking Lot' },
+      ];
+      const { error: insertError } = await supabase.from('customers').insert(dummyCustomers);
+      if (insertError) {
+        console.error('Insert Dummy Customers Error:', insertError);
+      }
+    }
+
+    // Fetch the updated customer list
     const { data, error } = await supabase.from('customers').select('*');
-    if (error) console.error(error);
+    if (error) console.error('Fetch Error:', error);
     else setCustomers(data);
-  }, []); // Empty array since supabase is stable
+  }, []);
 
   useEffect(() => {
     fetchCustomers();

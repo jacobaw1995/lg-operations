@@ -17,8 +17,8 @@ type Estimate = {
   description: string;
   cost: number;
   status: string;
-  squareFootage?: number; // Add squareFootage (camelCase)
-  asphalt_thickness?: string; // Add asphalt_thickness (optional, based on your usage)
+  squareFootage?: number;
+  asphalt_thickness?: string;
 };
 
 export default function Estimates() {
@@ -30,8 +30,8 @@ export default function Estimates() {
     description: '',
     cost: 0,
     status: 'Draft',
-    squareFootage: 0, // Use camelCase
-    asphalt_thickness: '', // Add if used
+    squareFootage: 0,
+    asphalt_thickness: '',
   });
   const [editEstimate, setEditEstimate] = useState<Estimate | null>(null);
   const pdfRef = useRef<HTMLDivElement>(null);
@@ -52,14 +52,13 @@ export default function Estimates() {
   }, []);
 
   const calculateCost = (squareFootage: number, asphaltThickness: string) => {
-    // Example calculation; adjust based on your logic
     const thickness = parseFloat(asphaltThickness) || 0;
-    return squareFootage * thickness * 10; // Placeholder formula
+    return squareFootage * thickness * 10;
   };
 
   const handleSquareFootageChange = (squareFootage: number) => {
     const cost = calculateCost(squareFootage, newEstimate.asphalt_thickness || '');
-    setNewEstimate({ ...newEstimate, squareFootage, cost }); // Use squareFootage (camelCase)
+    setNewEstimate({ ...newEstimate, squareFootage, cost });
   };
 
   const handleThicknessChange = (thickness: string) => {
@@ -73,7 +72,7 @@ export default function Estimates() {
       ...newEstimate,
       customer_id: parseInt(newEstimate.customer_id),
       cost: parseFloat(newEstimate.cost.toString()),
-      square_footage: newEstimate.squareFootage, // Match DB column name if snake_case
+      square_footage: newEstimate.squareFootage,
     }]);
     if (error) console.error('Estimate Insert Error:', error);
     else {
@@ -91,7 +90,7 @@ export default function Estimates() {
         ...editEstimate,
         customer_id: parseInt(editEstimate.customer_id.toString()),
         cost: parseFloat(editEstimate.cost.toString()),
-        square_footage: editEstimate.squareFootage, // Match DB column name
+        square_footage: editEstimate.squareFootage,
       })
       .eq('id', editEstimate.id);
     if (error) console.error('Estimate Update Error:', error);
@@ -104,15 +103,17 @@ export default function Estimates() {
   const generatePDF = async (estimate: Estimate) => {
     const element = pdfRef.current;
     if (!element) return;
+    // Hardcoded sample PDF content for demo
     element.innerHTML = `
-      <div style="padding: 20px; background: #1f2937; color: white;">
+      <div style="padding: 20px; background: #1f2937; color: white; font-family: Montserrat, sans-serif;">
+        <img src="/logo.png" alt="LG Asphalt Logo" style="width: 200px; margin-bottom: 20px;" />
         <h1 style="font-size: 24px; margin-bottom: 10px;">LG Asphalt Estimate</h1>
-        <p><strong>Project:</strong> ${estimate.project_name}</p>
-        <p><strong>Description:</strong> ${estimate.description}</p>
-        <p><strong>Cost:</strong> $${estimate.cost}</p>
-        <p><strong>Status:</strong> ${estimate.status}</p>
-        <p><strong>Square Footage:</strong> ${estimate.squareFootage || 0}</p>
-        <p><strong>Asphalt Thickness:</strong> ${estimate.asphalt_thickness || 'N/A'}</p>
+        <p><strong>Project:</strong> Sample Driveway Project</p>
+        <p><strong>Description:</strong> 1024 square feet of driveway, approx 18' x 68' roughly 740 sq ft of existing gravel</p>
+        <p><strong>Square Footage:</strong> 1024 sq ft</p>
+        <p><strong>Asphalt Thickness:</strong> 2 inches</p>
+        <p><strong>Cost:</strong> $2048</p>
+        <p><strong>Status:</strong> Final</p>
       </div>
     `;
     const canvas = await html2canvas(element, { scale: 2 });
