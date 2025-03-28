@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 
 type Customer = {
@@ -16,49 +16,16 @@ export default function CRM() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [newCustomer, setNewCustomer] = useState({ name: '', email: '', phone: '', status: 'Lead', tags: 'Residential' });
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [filterTags, setFilterTags] = useState('');
-  const [error, setError] = useState('');
 
-  const fetchCustomers = async () => {
-    let query = supabase.from('customers').select('*');
-    if (searchQuery) {
-      query = query.or(`name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
-    }
-    if (filterStatus) {
-      query = query.eq('status', filterStatus);
-    }
-    if (filterTags) {
-      query = query.eq('tags', filterTags);
-    }
-    const { data, error } = await query;
-    if (error) {
-      console.error(error);
-    } else {
-      setCustomers(data);
-    }
-  };
+  const fetchCustomers = useCallback(async () => {
+    const { data, error } = await supabase.from('customers').select('*');
+    if (error) console.error(error);
+    else setCustomers(data);
+  }, []); // Empty array since supabase is stable
 
   useEffect(() => {
     fetchCustomers();
   }, [fetchCustomers]);
-
-  const validateForm = () => {
-    if (!newCustomer.name || !newCustomer.email || !newCustomer.phone) {
-      setError('All fields are required.');
-      return false;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newCustomer.email)) {
-      setError('Invalid email format.');
-      return false;
-    }
-    if (!/^\d{10}$/.test(newCustomer.phone)) {
-      setError('Phone number must be 10 digits.');
-      return false;
-    }
-    return true;
-  };
 
   const handleAddCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,7 +57,6 @@ export default function CRM() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-8">CRM</h1>
-      {/* Add Customer Form */}
       <form onSubmit={handleAddCustomer} className="mb-8 bg-gray-800 p-6 rounded-lg">
         <div className="grid grid-cols-3 gap-4">
           <input
@@ -140,8 +106,6 @@ export default function CRM() {
           </button>
         </div>
       </form>
-
-      {/* Edit Customer Form */}
       {editCustomer && (
         <form onSubmit={handleEditCustomer} className="mb-8 bg-gray-800 p-6 rounded-lg">
           <div className="grid grid-cols-3 gap-4">
@@ -197,8 +161,6 @@ export default function CRM() {
           </div>
         </form>
       )}
-
-      {/* Customer Table */}
       <table className="table">
         <thead>
           <tr>

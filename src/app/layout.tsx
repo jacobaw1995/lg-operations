@@ -1,7 +1,7 @@
 import './globals.css';
 import { Inter } from 'next/font/google';
-import Sidebar from '../components/Sidebar'; // Import the new Sidebar component
-import { ErrorBoundary } from '../components/ErrorBoundary'; // Keep ErrorBoundary
+import Sidebar from '../components/Sidebar';
+import ErrorBoundary from '../components/ErrorBoundary'; // Change from { ErrorBoundary } to default import
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -19,7 +19,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <div className="flex">
-          <Sidebar /> {/* Replace the inline sidebar with the Client Component */}
+          <Sidebar />
           <div className="main-content">
             <ErrorBoundary>
               {children}
