@@ -45,7 +45,7 @@ export default function Estimates() {
   const [estimates, setEstimates] = useState<Estimate[]>([]);
   const [newEstimate, setNewEstimate] = useState({
     project_name: '',
-    customer_id: '',
+    customer_id: 0, // Changed to number
     description: '',
     cost: 0,
     status: 'Draft',
@@ -125,7 +125,7 @@ export default function Estimates() {
     setLoading(true);
     const { error } = await supabase.from('estimates').insert([{
       ...newEstimate,
-      customer_id: parseInt(newEstimate.customer_id),
+      customer_id: newEstimate.customer_id, // Already a number
       cost: parseFloat(newEstimate.cost.toString()),
       square_footage: newEstimate.squareFootage,
     }]);
@@ -133,7 +133,7 @@ export default function Estimates() {
       setError('Failed to add estimate. Please try again.');
       console.error('Estimate Insert Error:', error);
     } else {
-      setNewEstimate({ project_name: '', customer_id: '', description: '', cost: 0, status: 'Draft', squareFootage: 0, asphalt_thickness: '2' });
+      setNewEstimate({ project_name: '', customer_id: 0, description: '', cost: 0, status: 'Draft', squareFootage: 0, asphalt_thickness: '2' });
       fetchEstimates();
     }
     setLoading(false);
@@ -150,7 +150,7 @@ export default function Estimates() {
       .from('estimates')
       .update({
         ...editEstimate,
-        customer_id: parseInt(editEstimate.customer_id.toString()),
+        customer_id: editEstimate.customer_id, // Already a number
         cost: parseFloat(editEstimate.cost.toString()),
         square_footage: editEstimate.squareFootage,
       })
@@ -205,8 +205,8 @@ export default function Estimates() {
             required
           />
           <select
-            value={newEstimate.customer_id}
-            onChange={(e) => setNewEstimate({ ...newEstimate, customer_id: e.target.value })}
+            value={newEstimate.customer_id || ''}
+            onChange={(e) => setNewEstimate({ ...newEstimate, customer_id: parseInt(e.target.value) || 0 })}
             className="p-2 rounded bg-gray-700 text-white"
             required
           >
