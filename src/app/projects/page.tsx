@@ -7,6 +7,9 @@ import { CSS } from '@dnd-kit/utilities';
 import { supabase } from '../../lib/supabase';
 import ProjectSelector from './ProjectSelector';
 
+// Force dynamic rendering to avoid prerendering issues with useSearchParams in ProjectSelector
+export const dynamic = 'force-dynamic';
+
 type Task = {
   id: number;
   project_id: number;
