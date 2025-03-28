@@ -42,7 +42,7 @@ export default function CRM() {
 
   useEffect(() => {
     fetchCustomers();
-  }, [searchQuery, filterStatus, filterTags]);
+  }, [fetchCustomers]);
 
   const validateForm = () => {
     if (!newCustomer.name || !newCustomer.email || !newCustomer.phone) {
@@ -62,27 +62,10 @@ export default function CRM() {
 
   const handleAddCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    if (!validateForm()) return;
-
-    const { data: existingCustomer, error: checkError } = await supabase
-      .from('customers')
-      .select('id')
-      .eq('email', newCustomer.email)
-      .single();
-    if (existingCustomer) {
-      setError('A customer with this email already exists.');
-      return;
-    }
-    if (checkError && checkError.code !== 'PGRST116') {
-      setError('Error checking email: ' + checkError.message);
-      return;
-    }
-
-    const { error } = await supabase.from('customers').insert([newCustomer]);
-    if (error) {
-      setError('Error adding customer: ' + error.message);
-    } else {
+    const { data, error } = await supabase.from('customers').insert([newCustomer]).select();
+    if (error) console.error('Customer Insert Error:', error);
+    else {
+      console.log('Customer Added:', data);
       setNewCustomer({ name: '', email: '', phone: '', status: 'Lead', tags: 'Residential' });
       fetchCustomers();
     }
@@ -91,20 +74,14 @@ export default function CRM() {
   const handleEditCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editCustomer) return;
-    setError('');
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('customers')
-      .update({
-        name: editCustomer.name,
-        email: editCustomer.email,
-        phone: editCustomer.phone,
-        status: editCustomer.status,
-        tags: editCustomer.tags,
-      })
-      .eq('id', editCustomer.id);
-    if (error) {
-      setError('Error updating customer: ' + error.message);
-    } else {
+      .update(editCustomer)
+      .eq('id', editCustomer.id)
+      .select();
+    if (error) console.error('Customer Update Error:', error);
+    else {
+      console.log('Customer Updated:', data);
       setEditCustomer(null);
       fetchCustomers();
     }
@@ -113,79 +90,103 @@ export default function CRM() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-8">CRM</h1>
-      <form onSubmit={editCustomer ? handleEditCustomer : handleAddCustomer} className="mb-8 bg-gray-800 p-6 rounded-lg">
+      {/* Add Customer Form */}
+      <form onSubmit={handleAddCustomer} className="mb-8 bg-gray-800 p-6 rounded-lg">
         <div className="grid grid-cols-3 gap-4">
           <input
             type="text"
             placeholder="Name"
-            value={editCustomer ? editCustomer.name : newCustomer.name}
-            onChange={(e) =>
-              editCustomer
-                ? setEditCustomer({ ...editCustomer, name: e.target.value })
-                : setNewCustomer({ ...newCustomer, name: e.target.value })
-            }
+            value={newCustomer.name}
+            onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
             className="p-2 rounded bg-gray-700 text-white"
             required
           />
           <input
             type="email"
             placeholder="Email"
-            value={editCustomer ? editCustomer.email : newCustomer.email}
-            onChange={(e) =>
-              editCustomer
-                ? setEditCustomer({ ...editCustomer, email: e.target.value })
-                : setNewCustomer({ ...newCustomer, email: e.target.value })
-            }
+            value={newCustomer.email}
+            onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
             className="p-2 rounded bg-gray-700 text-white"
             required
           />
           <input
             type="text"
             placeholder="Phone"
-            value={editCustomer ? editCustomer.phone : newCustomer.phone}
-            onChange={(e) =>
-              editCustomer
-                ? setEditCustomer({ ...editCustomer, phone: e.target.value })
-                : setNewCustomer({ ...newCustomer, phone: e.target.value })
-            }
+            value={newCustomer.phone}
+            onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
             className="p-2 rounded bg-gray-700 text-white"
             required
           />
           <select
-            value={editCustomer ? editCustomer.status : newCustomer.status}
-            onChange={(e) =>
-              editCustomer
-                ? setEditCustomer({ ...editCustomer, status: e.target.value })
-                : setNewCustomer({ ...newCustomer, status: e.target.value })
-            }
+            value={newCustomer.status}
+            onChange={(e) => setNewCustomer({ ...newCustomer, status: e.target.value })}
             className="p-2 rounded bg-gray-700 text-white"
           >
             <option value="Lead">Lead</option>
             <option value="Pending">Pending</option>
             <option value="Sold">Sold</option>
-            <option value="Lost">Lost</option>
-            <option value="In Production">In Production</option>
-            <option value="Complete">Complete</option>
           </select>
           <select
-            value={editCustomer ? editCustomer.tags : newCustomer.tags}
-            onChange={(e) =>
-              editCustomer
-                ? setEditCustomer({ ...editCustomer, tags: e.target.value })
-                : setNewCustomer({ ...newCustomer, tags: e.target.value })
-            }
+            value={newCustomer.tags}
+            onChange={(e) => setNewCustomer({ ...newCustomer, tags: e.target.value })}
             className="p-2 rounded bg-gray-700 text-white"
           >
             <option value="Residential">Residential</option>
             <option value="Commercial">Commercial</option>
             <option value="Driveway">Driveway</option>
-            <option value="Parking Lot">Parking Lot</option>
-            <option value="Other">Other</option>
           </select>
           <button type="submit" className="btn-yellow">
-            {editCustomer ? 'Update Customer' : 'Add Customer'}
+            Add Customer
           </button>
-          {editCustomer && (
+        </div>
+      </form>
+
+      {/* Edit Customer Form */}
+      {editCustomer && (
+        <form onSubmit={handleEditCustomer} className="mb-8 bg-gray-800 p-6 rounded-lg">
+          <div className="grid grid-cols-3 gap-4">
+            <input
+              type="text"
+              value={editCustomer.name}
+              onChange={(e) => setEditCustomer({ ...editCustomer, name: e.target.value })}
+              className="p-2 rounded bg-gray-700 text-white"
+              required
+            />
+            <input
+              type="email"
+              value={editCustomer.email}
+              onChange={(e) => setEditCustomer({ ...editCustomer, email: e.target.value })}
+              className="p-2 rounded bg-gray-700 text-white"
+              required
+            />
+            <input
+              type="text"
+              value={editCustomer.phone}
+              onChange={(e) => setEditCustomer({ ...editCustomer, phone: e.target.value })}
+              className="p-2 rounded bg-gray-700 text-white"
+              required
+            />
+            <select
+              value={editCustomer.status}
+              onChange={(e) => setEditCustomer({ ...editCustomer, status: e.target.value })}
+              className="p-2 rounded bg-gray-700 text-white"
+            >
+              <option value="Lead">Lead</option>
+              <option value="Pending">Pending</option>
+              <option value="Sold">Sold</option>
+            </select>
+            <select
+              value={editCustomer.tags}
+              onChange={(e) => setEditCustomer({ ...editCustomer, tags: e.target.value })}
+              className="p-2 rounded bg-gray-700 text-white"
+            >
+              <option value="Residential">Residential</option>
+              <option value="Commercial">Commercial</option>
+              <option value="Driveway">Driveway</option>
+            </select>
+            <button type="submit" className="btn-yellow">
+              Update Customer
+            </button>
             <button
               type="button"
               onClick={() => setEditCustomer(null)}
@@ -193,44 +194,11 @@ export default function CRM() {
             >
               Cancel
             </button>
-          )}
-        </div>
-        {error && <p className="text-red-500 mt-4">{error}</p>}
-      </form>
-      <div className="mb-8 flex gap-4">
-        <input
-          type="text"
-          placeholder="Search by name or email"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="p-2 rounded bg-gray-700 text-white w-1/3"
-        />
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="p-2 rounded bg-gray-700 text-white"
-        >
-          <option value="">Filter by Status</option>
-          <option value="Lead">Lead</option>
-          <option value="Pending">Pending</option>
-          <option value="Sold">Sold</option>
-          <option value="Lost">Lost</option>
-          <option value="In Production">In Production</option>
-          <option value="Complete">Complete</option>
-        </select>
-        <select
-          value={filterTags}
-          onChange={(e) => setFilterTags(e.target.value)}
-          className="p-2 rounded bg-gray-700 text-white"
-        >
-          <option value="">Filter by Tags</option>
-          <option value="Residential">Residential</option>
-          <option value="Commercial">Commercial</option>
-          <option value="Driveway">Driveway</option>
-          <option value="Parking Lot">Parking Lot</option>
-          <option value="Other">Other</option>
-        </select>
-      </div>
+          </div>
+        </form>
+      )}
+
+      {/* Customer Table */}
       <table className="table">
         <thead>
           <tr>

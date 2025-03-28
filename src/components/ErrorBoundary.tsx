@@ -1,22 +1,22 @@
 'use client';
 
-import { Component, ReactNode } from 'react';
+import React, { Component, ReactNode } from 'react';
 
 type ErrorBoundaryProps = {
   children: ReactNode;
-  fallback?: ReactNode;
 };
 
 type ErrorBoundaryState = {
   hasError: boolean;
 };
 
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  state: ErrorBoundaryState = {
-    hasError: false,
-  };
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
 
-  static getDerivedStateFromError(_: Error): ErrorBoundaryState {
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState { // Rename _ to error
     return { hasError: true };
   }
 
@@ -26,8 +26,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   render() {
     if (this.state.hasError) {
-      return this.props.fallback || <h1 className="text-red-500">Something went wrong.</h1>;
+      return <h1 className="text-red-500 p-8">Something went wrong. Please try again later.</h1>;
     }
     return this.props.children;
   }
 }
+
+export default ErrorBoundary;
