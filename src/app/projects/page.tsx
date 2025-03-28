@@ -5,9 +5,11 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { SortableContext, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { supabase } from '../../lib/supabase';
+import { useRouter, useSearchParams } from 'next/navigation'; // Added useSearchParams
 
 type Task = {
   id: number;
+  project_id: number;
   task: string;
   status: string;
   deadline: string;
@@ -19,7 +21,34 @@ type Project = {
   name: string;
 };
 
-function SortableTask({ task }: { task: Task }) {
+// Modal Component
+function Modal({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: React.ReactNode }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-gray-800 p-6 rounded-lg shadow-lg w-1/2">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Edit Task</h2>
+          <button onClick={onClose} className="text-red-500 hover:text-red-700">
+            Close
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function SortableTask({
+  task,
+  onEdit,
+  onDelete,
+}: {
+  task: Task;
+  onEdit: (task: Task) => void;
+  onDelete: (taskId: number) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task.id });
 
   const style = {
@@ -33,20 +62,37 @@ function SortableTask({ task }: { task: Task }) {
       style={style}
       {...attributes}
       {...listeners}
-      className="bg-gray-700 p-4 mb-2 rounded cursor-move"
+      className="bg-gray-700 p-4 mb-2 rounded cursor-move flex justify-between items-center"
     >
-      <p>{task.task}</p>
-      <p className="text-sm text-gray-400">Due: {task.deadline}</p>
-      <p className="text-sm text-gray-400">Assigned: {task.assigned_to}</p>
+      <div>
+        <p>{task.task}</p>
+        <p className="text-sm text-gray-400">Due: {task.deadline}</p>
+        <p className="text-sm text-gray-400">Assigned: {task.assigned_to}</p>
+      </div>
+      <div>
+        <button onClick={() => onEdit(task)} className="btn-yellow mr-2">
+          Edit
+        </button>
+        <button onClick={() => onDelete(task.id)} className="btn-yellow bg-red-500 hover:bg-red-600">
+          Delete
+        </button>
+      </div>
     </div>
   );
 }
 
 export default function Projects() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const searchParams = useSearchParams(); // Added to read query params
+  const [selectedProject, setSelectedProject] = useState<number | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newProject, setNewProject] = useState({ name: '' });
   const [newTask, setNewTask] = useState({ task: '', status: 'To Do', deadline: '', assigned_to: '' });
+  const [editTask, setEditTask] = useState<Task | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const router = useRouter(); // Added for navigation
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -56,14 +102,42 @@ export default function Projects() {
   );
 
   const fetchProjects = useCallback(async () => {
-    const { data } = await supabase.from('projects').select('*');
-    setProjects(data || []);
-  }, []);
+    setLoading(true);
+    setError('');
+    const { data, error } = await supabase.from('projects').select('*');
+    if (error) {
+      setError('Failed to load projects. Please try again.');
+      console.error('Fetch Projects Error:', error);
+    } else {
+      setProjects(data || []);
+      const selected = searchParams.get('selected'); // Read selected project from query param
+      if (data && data.length > 0) {
+        if (selected && data.some((p) => p.id === parseInt(selected))) {
+          setSelectedProject(parseInt(selected));
+        } else {
+          setSelectedProject(data[0].id);
+        }
+      }
+    }
+    setLoading(false);
+  }, [searchParams]);
 
   const fetchTasks = useCallback(async () => {
-    const { data } = await supabase.from('tasks').select('*');
-    setTasks(data || []);
-  }, []);
+    if (!selectedProject) return;
+    setLoading(true);
+    setError('');
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('project_id', selectedProject);
+    if (error) {
+      setError('Failed to load tasks. Please try again.');
+      console.error('Fetch Tasks Error:', error);
+    } else {
+      setTasks(data || []);
+    }
+    setLoading(false);
+  }, [selectedProject]);
 
   useEffect(() => {
     fetchProjects();
@@ -71,41 +145,96 @@ export default function Projects() {
 
   useEffect(() => {
     fetchTasks();
-  }, [fetchTasks]);
+  }, [selectedProject, fetchTasks]);
 
   const handleAddProject = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    if (!newProject.name) {
+      setError('Project name is required.');
+      return;
+    }
+    setLoading(true);
     const projectData = { ...newProject, customer_id: null };
     const { data, error } = await supabase.from('projects').insert([projectData]).select();
-    if (error) console.error('Project Insert Error:', error);
-    else {
+    if (error) {
+      setError('Failed to add project. Please try again.');
+      console.error('Project Insert Error:', error);
+    } else {
       console.log('Project Added:', data);
       setNewProject({ name: '' });
       fetchProjects();
     }
+    setLoading(false);
   };
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!projects[0]?.id) {
-      console.error('No projects available for task');
+    setError('');
+    if (!newTask.task || !newTask.deadline || !newTask.assigned_to || !selectedProject) {
+      setError('All fields are required, and a project must be selected.');
       return;
     }
-    const taskData = { ...newTask, project_id: projects[0]?.id };
+    setLoading(true);
+    const taskData = { ...newTask, project_id: selectedProject };
     const { data, error } = await supabase.from('tasks').insert([taskData]).select();
-    if (error) console.error('Task Insert Error:', error);
-    else {
+    if (error) {
+      setError('Failed to add task. Please try again.');
+      console.error('Task Insert Error:', error);
+    } else {
       console.log('Task Added:', data);
       setNewTask({ task: '', status: 'To Do', deadline: '', assigned_to: '' });
       fetchTasks();
     }
+    setLoading(false);
+  };
+
+  const handleEditTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTask) return;
+    setError('');
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('tasks')
+      .update({
+        task: editTask.task,
+        status: editTask.status,
+        deadline: editTask.deadline,
+        assigned_to: editTask.assigned_to,
+      })
+      .eq('id', editTask.id)
+      .select();
+    if (error) {
+      setError('Failed to update task. Please try again.');
+      console.error('Task Update Error:', error);
+    } else {
+      console.log('Task Updated:', data);
+      setEditTask(null);
+      setIsModalOpen(false);
+      fetchTasks();
+    }
+    setLoading(false);
+  };
+
+  const handleDeleteTask = async (taskId: number) => {
+    setError('');
+    setLoading(true);
+    const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+    if (error) {
+      setError('Failed to delete task. Please try again.');
+      console.error('Task Delete Error:', error);
+    } else {
+      fetchTasks();
+    }
+    setLoading(false);
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-
     if (!over) return;
 
+    setLoading(true);
+    setError('');
     const activeTask = tasks.find((task) => task.id === active.id);
     const overColumn = over.id.toString().split('-')[0];
 
@@ -115,9 +244,14 @@ export default function Projects() {
         .from('tasks')
         .update({ status: updatedTask.status })
         .eq('id', activeTask.id);
-      if (error) console.error(error);
-      else fetchTasks();
+      if (error) {
+        setError('Failed to update task status. Please try again.');
+        console.error('Drag Update Error:', error);
+      } else {
+        fetchTasks();
+      }
     }
+    setLoading(false);
   };
 
   const columns: { [key: string]: Task[] } = {
@@ -139,58 +273,123 @@ export default function Projects() {
             className="p-2 rounded bg-gray-700 text-white"
             required
           />
-          <button type="submit" className="btn-yellow">
-            Add Project
+          <button type="submit" className="btn-yellow" disabled={loading}>
+            {loading ? 'Adding...' : 'Add Project'}
           </button>
         </div>
       </form>
-      <form onSubmit={handleAddTask} className="mb-8 bg-gray-800 p-6 rounded-lg">
-        <div className="grid grid-cols-4 gap-4">
-          <input
-            type="text"
-            placeholder="Task"
-            value={newTask.task}
-            onChange={(e) => setNewTask({ ...newTask, task: e.target.value })}
-            className="p-2 rounded bg-gray-700 text-white"
-            required
-          />
-          <input
-            type="date"
-            value={newTask.deadline}
-            onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
-            className="p-2 rounded bg-gray-700 text-white"
-            required
-          />
-          <input
-            type="text"
-            placeholder="Assigned To"
-            value={newTask.assigned_to}
-            onChange={(e) => setNewTask({ ...newTask, assigned_to: e.target.value })}
-            className="p-2 rounded bg-gray-700 text-white"
-            required
-          />
-          <button type="submit" className="btn-yellow">
-            Add Task
-          </button>
-        </div>
-      </form>
-      <h2 className="text-2xl font-bold mb-4">Sample Project</h2> {/* Added static project name header */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-3 gap-4">
-          {Object.keys(columns).map((column) => (
-            <div key={column} className="bg-gray-800 p-4 rounded-lg">
-              <h2 className="text-xl font-bold mb-4">{column}</h2>
-              <SortableContext items={columns[column].map((task) => task.id)} id={`${column}-column`}>
-                <div className="min-h-[200px]">
-                  {columns[column].map((task) => (
-                    <SortableTask key={task.id} task={task} />
-                  ))}
-                </div>
-              </SortableContext>
-            </div>
+      <div className="mb-8">
+        <select
+          value={selectedProject || ''}
+          onChange={(e) => {
+            const value = parseInt(e.target.value);
+            setSelectedProject(value);
+            router.push(`/projects?selected=${value}`, undefined, { shallow: true }); // Update URL without full navigation
+          }}
+          className="p-2 rounded bg-gray-700 text-white w-full"
+        >
+          <option value="">Select Project</option>
+          {projects.map((project) => (
+            <option key={project.id} value={project.id}>
+              {project.name}
+            </option>
           ))}
-        </div>
-      </DndContext>
+        </select>
+      </div>
+      {selectedProject && (
+        <>
+          <form onSubmit={handleAddTask} className="mb-8 bg-gray-800 p-6 rounded-lg">
+            <div className="grid grid-cols-4 gap-4">
+              <input
+                type="text"
+                placeholder="Task"
+                value={newTask.task}
+                onChange={(e) => setNewTask({ ...newTask, task: e.target.value })}
+                className="p-2 rounded bg-gray-700 text-white"
+                required
+              />
+              <input
+                type="date"
+                value={newTask.deadline}
+                onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
+                className="p-2 rounded bg-gray-700 text-white"
+                required
+              />
+              <input
+                type="text"
+                placeholder="Assigned To"
+                value={newTask.assigned_to}
+                onChange={(e) => setNewTask({ ...newTask, assigned_to: e.target.value })}
+                className="p-2 rounded bg-gray-700 text-white"
+                required
+              />
+              <button type="submit" className="btn-yellow" disabled={loading}>
+                {loading ? 'Adding...' : 'Add Task'}
+              </button>
+            </div>
+          </form>
+          <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+            {editTask && (
+              <form onSubmit={handleEditTask}>
+                <div className="grid grid-cols-2 gap-4">
+                  <input
+                    type="text"
+                    placeholder="Task"
+                    value={editTask.task}
+                    onChange={(e) => setEditTask({ ...editTask, task: e.target.value })}
+                    className="p-2 rounded bg-gray-700 text-white"
+                    required
+                  />
+                  <input
+                    type="date"
+                    value={editTask.deadline}
+                    onChange={(e) => setEditTask({ ...editTask, deadline: e.target.value })}
+                    className="p-2 rounded bg-gray-700 text-white"
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="Assigned To"
+                    value={editTask.assigned_to}
+                    onChange={(e) => setEditTask({ ...editTask, assigned_to: e.target.value })}
+                    className="p-2 rounded bg-gray-700 text-white"
+                    required
+                  />
+                  <button type="submit" className="btn-yellow" disabled={loading}>
+                    {loading ? 'Updating...' : 'Update Task'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </Modal>
+          {loading && <p className="text-yellow-500 mb-4">Loading...</p>}
+          {error && <p className="text-red-500 mb-4">{error}</p>}
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <div className="grid grid-cols-3 gap-4">
+              {Object.keys(columns).map((column) => (
+                <div key={column} className="bg-gray-800 p-4 rounded-lg">
+                  <h2 className="text-xl font-bold mb-4">{column}</h2>
+                  <SortableContext items={columns[column].map((task) => task.id)} id={`${column}-column`}>
+                    <div className="min-h-[200px]">
+                      {columns[column].map((task) => (
+                        <SortableTask
+                          key={task.id}
+                          task={task}
+                          onEdit={(task) => {
+                            setEditTask(task);
+                            setIsModalOpen(true);
+                          }}
+                          onDelete={handleDeleteTask}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </div>
+              ))}
+            </div>
+          </DndContext>
+        </>
+      )}
     </div>
   );
 }

@@ -12,8 +12,8 @@ export default function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Login attempted"); // Replaced password logging with generic message
-    const { data, error } = await supabase.auth.signInWithPassword({
+    console.log("Login attempted"); // Generic log for debugging
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -21,11 +21,6 @@ export default function Login() {
       setError(error.message);
       console.error("Login error:", error.message);
     } else {
-      console.log("Login response:", JSON.stringify(data, null, 2));
-      document.cookie = `sb-access-token=${data.session.access_token}; path=/; SameSite=Lax; Secure`;
-      document.cookie = `sb-refresh-token=${data.session.refresh_token}; path=/; SameSite=Lax; Secure`;
-      console.log("Cookies set manually");
-      console.log("Login successful, redirecting...");
       try {
         await router.push('/dashboard');
         console.log("Redirect completed");

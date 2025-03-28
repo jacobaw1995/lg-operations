@@ -1,9 +1,6 @@
 import './globals.css';
-import { Inter } from 'next/font/google';
 import Sidebar from '../components/Sidebar';
-import ErrorBoundary from '../components/ErrorBoundary'; // Change from { ErrorBoundary } to default import
-
-const inter = Inter({ subsets: ['latin'] });
+import ErrorBoundary from '../components/ErrorBoundary';
 
 export const metadata = {
   title: 'LG Operations',
@@ -17,7 +14,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body>
         <div className="flex">
           <Sidebar />
           <div className="main-content">
