@@ -1,16 +1,15 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 
 export async function middleware(request: NextRequest) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session && request.nextUrl.pathname !== '/') {
+  const accessToken = request.cookies.get('sb-access-token')?.value;
+  console.log("Middleware - Path:", request.nextUrl.pathname);
+  console.log("Middleware - Access Token:", accessToken || "Not found");
+  if (!accessToken && request.nextUrl.pathname !== '/') {
+    console.log("Middleware - Redirecting to /");
     return NextResponse.redirect(new URL('/', request.url));
   }
+  console.log("Middleware - Proceeding");
   return NextResponse.next();
 }
 
