@@ -5,7 +5,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { SortableContext, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { supabase } from '../../lib/supabase';
-import { useRouter, useSearchParams } from 'next/navigation'; // Added useSearchParams
+import { useRouter, useSearchParams } from 'next/navigation';
 
 type Task = {
   id: number;
@@ -83,7 +83,7 @@ function SortableTask({
 
 export default function Projects() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const searchParams = useSearchParams(); // Added to read query params
+  const searchParams = useSearchParams();
   const [selectedProject, setSelectedProject] = useState<number | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newProject, setNewProject] = useState({ name: '' });
@@ -92,7 +92,7 @@ export default function Projects() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const router = useRouter(); // Added for navigation
+  const router = useRouter();
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -110,7 +110,7 @@ export default function Projects() {
       console.error('Fetch Projects Error:', error);
     } else {
       setProjects(data || []);
-      const selected = searchParams.get('selected'); // Read selected project from query param
+      const selected = searchParams.get('selected');
       if (data && data.length > 0) {
         if (selected && data.some((p) => p.id === parseInt(selected))) {
           setSelectedProject(parseInt(selected));
@@ -284,7 +284,7 @@ export default function Projects() {
           onChange={(e) => {
             const value = parseInt(e.target.value);
             setSelectedProject(value);
-            router.push(`/projects?selected=${value}`, undefined, { shallow: true }); // Update URL without full navigation
+            router.push(`/projects?selected=${value}`); // Removed shallow option
           }}
           className="p-2 rounded bg-gray-700 text-white w-full"
         >
