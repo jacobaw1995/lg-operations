@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -55,15 +55,15 @@ export default function Projects() {
     })
   );
 
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     const { data } = await supabase.from('projects').select('*');
     setProjects(data || []);
-  };
+  }, []);
 
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     const { data } = await supabase.from('tasks').select('*');
     setTasks(data || []);
-  };
+  }, []);
 
   useEffect(() => {
     fetchProjects();
