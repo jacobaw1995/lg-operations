@@ -21,7 +21,11 @@ export default function Login() {
       setError(error.message);
       console.error("Login error:", error.message);
     } else {
-      console.log("Login response:", data);
+      console.log("Login response:", JSON.stringify(data, null, 2));
+      // Manually set cookies
+      document.cookie = `sb-access-token=${data.session.access_token}; path=/; SameSite=Lax; Secure`;
+      document.cookie = `sb-refresh-token=${data.session.refresh_token}; path=/; SameSite=Lax; Secure`;
+      console.log("Cookies set manually");
       console.log("Login successful, redirecting...");
       try {
         await router.push('/dashboard');
