@@ -9,6 +9,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 // Force dynamic rendering to avoid prerendering issues with useSearchParams
 export const dynamic = 'force-dynamic';
+export const revalidate = 0; // Disable revalidation (caching) to ensure dynamic rendering
+export const dynamicParams = true; // Ensure dynamic params are handled at request time
 
 type Task = {
   id: number;
