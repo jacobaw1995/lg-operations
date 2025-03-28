@@ -45,7 +45,7 @@ export default function Estimates() {
   const [estimates, setEstimates] = useState<Estimate[]>([]);
   const [newEstimate, setNewEstimate] = useState({
     project_name: '',
-    customer_id: 0, // Changed to number
+    customer_id: '',
     description: '',
     cost: 0,
     status: 'Draft',
@@ -105,12 +105,13 @@ export default function Estimates() {
     setNewEstimate({ ...newEstimate, asphalt_thickness: thickness, cost });
   };
 
-  const validateForm = (estimate: typeof newEstimate) => {
+  const validateForm = (estimate: { project_name: string; customer_id: string; description: string; squareFootage?: number; asphalt_thickness?: string }) => {
     if (!estimate.project_name || !estimate.customer_id || !estimate.description) {
       setError('All fields are required.');
       return false;
     }
-    if (!estimate.squareFootage || estimate.squareFootage <= 0) {
+    const squareFootage = estimate.squareFootage ?? 0; // Default to 0 if undefined
+    if (squareFootage <= 0) {
       setError('Square footage must be a positive number.');
       return false;
     }
@@ -125,7 +126,7 @@ export default function Estimates() {
     setLoading(true);
     const { error } = await supabase.from('estimates').insert([{
       ...newEstimate,
-      customer_id: newEstimate.customer_id, // Already a number
+      customer_id: parseInt(newEstimate.customer_id),
       cost: parseFloat(newEstimate.cost.toString()),
       square_footage: newEstimate.squareFootage,
     }]);
@@ -133,7 +134,7 @@ export default function Estimates() {
       setError('Failed to add estimate. Please try again.');
       console.error('Estimate Insert Error:', error);
     } else {
-      setNewEstimate({ project_name: '', customer_id: 0, description: '', cost: 0, status: 'Draft', squareFootage: 0, asphalt_thickness: '2' });
+      setNewEstimate({ project_name: '', customer_id: '', description: '', cost: 0, status: 'Draft', squareFootage: 0, asphalt_thickness: '2' });
       fetchEstimates();
     }
     setLoading(false);
@@ -150,9 +151,9 @@ export default function Estimates() {
       .from('estimates')
       .update({
         ...editEstimate,
-        customer_id: editEstimate.customer_id, // Already a number
+        customer_id: parseInt(editEstimate.customer_id.toString()),
         cost: parseFloat(editEstimate.cost.toString()),
-        square_footage: editEstimate.squareFootage,
+        square_footage: editEstimate.squareFootage ?? 0, // Ensure squareFootage is a number
       })
       .eq('id', editEstimate.id);
     if (error) {
@@ -205,8 +206,8 @@ export default function Estimates() {
             required
           />
           <select
-            value={newEstimate.customer_id || ''}
-            onChange={(e) => setNewEstimate({ ...newEstimate, customer_id: parseInt(e.target.value) || 0 })}
+            value={newEstimate.customer_id}
+            onChange={(e) => setNewEstimate({ ...newEstimate, customer_id: e.target.value })}
             className="p-2 rounded bg-gray-700 text-white"
             required
           >
@@ -299,7 +300,7 @@ export default function Estimates() {
               <input
                 type="number"
                 placeholder="Square Footage"
-                value={editEstimate.squareFootage || 0}
+                value={editEstimate.squareFootage ?? 0} // Default to 0 if undefined
                 onChange={(e) => {
                   const squareFootage = parseFloat(e.target.value) || 0;
                   const cost = calculateCost(squareFootage, editEstimate.asphalt_thickness || '2');
@@ -312,7 +313,7 @@ export default function Estimates() {
                 value={editEstimate.asphalt_thickness || '2'}
                 onChange={(e) => {
                   const thickness = e.target.value;
-                  const cost = calculateCost(editEstimate.squareFootage || 0, thickness);
+                  const cost = calculateCost(editEstimate.squareFootage ?? 0, thickness);
                   setEditEstimate({ ...editEstimate, asphalt_thickness: thickness, cost });
                 }}
                 className="p-2 rounded bg-gray-700 text-white"
