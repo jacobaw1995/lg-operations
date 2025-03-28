@@ -16,7 +16,7 @@ type Task = {
   task: string;
   deadline: string;
   status: string;
-  project: { name: string };
+  project: { name: string }[]; // Updated to reflect Supabase's array return type
 };
 
 export default function Dashboard() {
@@ -113,7 +113,7 @@ export default function Dashboard() {
                       <td>{task.task}</td>
                       <td>
                         <Link href={`/projects?selected=${task.project_id}`} className="text-yellow-500 hover:underline">
-                          {task.project.name}
+                          {task.project[0]?.name || 'Unknown Project'} {/* Access first project name */}
                         </Link>
                       </td>
                       <td>{task.deadline}</td>
