@@ -7,6 +7,9 @@ import { CSS } from '@dnd-kit/utilities';
 import { supabase } from '../../lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+// Force dynamic rendering to avoid prerendering issues with useSearchParams
+export const dynamic = 'force-dynamic';
+
 type Task = {
   id: number;
   project_id: number;
@@ -284,7 +287,7 @@ export default function Projects() {
           onChange={(e) => {
             const value = parseInt(e.target.value);
             setSelectedProject(value);
-            router.push(`/projects?selected=${value}`); // Removed shallow option
+            router.push(`/projects?selected=${value}`);
           }}
           className="p-2 rounded bg-gray-700 text-white w-full"
         >
