@@ -73,10 +73,10 @@ export default function Projects() {
 
   const handleAddProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.from('projects').insert([newProject]);
-    if (error) {
-      console.error(error);
-    } else {
+    const { data, error } = await supabase.from('projects').insert([newProject]).select();
+    if (error) console.error('Project Insert Error:', error);
+    else {
+      console.log('Project Added:', data);
       setNewProject({ name: '' });
       fetchProjects();
     }
@@ -157,7 +157,7 @@ export default function Projects() {
             type="text"
             placeholder="Project Name"
             value={newProject.name}
-            onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+            onChange={(e) => setNewProject({ name: e.target.value })} // Simplified state update
             className="p-2 rounded bg-gray-700 text-white"
             required
           />

@@ -1,0 +1,16 @@
+
+Supabase Account
+Organization: LG Asphalt
+Project Name: lg-operations
+Database Password: Ed4DteTseoiA8MXN
+
+NEXT_PUBLIC_SUPABASE_URL: https://qnagnjrbhxpivzlgranv.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFuYWduanJiaHhwaXZ6bGdyYW52Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMwOTc5NzUsImV4cCI6MjA1ODY3Mzk3NX0.-s-kW65SuFj7Zosl8kFD4Ywad9xsqPo5jfc1jE9xzOU
+
+Test User
+Email: test@lgasphalt.com
+Password: password123
+
+Start Local Server:
+- cd lg-operations
+- npm run dev

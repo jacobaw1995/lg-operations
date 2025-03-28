@@ -15,14 +15,12 @@ type Customer = {
 export default function CRM() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [newCustomer, setNewCustomer] = useState({ name: '', email: '', phone: '', status: 'Lead', tags: 'Residential' });
+  const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
 
   const fetchCustomers = async () => {
     const { data, error } = await supabase.from('customers').select('*');
-    if (error) {
-      console.error(error);
-    } else {
-      setCustomers(data);
-    }
+    if (error) console.error(error);
+    else setCustomers(data);
   };
 
   useEffect(() => {
@@ -31,11 +29,27 @@ export default function CRM() {
 
   const handleAddCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.from('customers').insert([newCustomer]);
-    if (error) {
-      console.error(error);
-    } else {
+    const { data, error } = await supabase.from('customers').insert([newCustomer]).select();
+    if (error) console.error('Customer Insert Error:', error);
+    else {
+      console.log('Customer Added:', data);
       setNewCustomer({ name: '', email: '', phone: '', status: 'Lead', tags: 'Residential' });
+      fetchCustomers();
+    }
+  };
+
+  const handleEditCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editCustomer) return;
+    const { data, error } = await supabase
+      .from('customers')
+      .update(editCustomer)
+      .eq('id', editCustomer.id)
+      .select();
+    if (error) console.error('Customer Update Error:', error);
+    else {
+      console.log('Customer Updated:', data);
+      setEditCustomer(null);
       fetchCustomers();
     }
   };
@@ -43,6 +57,7 @@ export default function CRM() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-8">CRM</h1>
+      {/* Add Customer Form */}
       <form onSubmit={handleAddCustomer} className="mb-8 bg-gray-800 p-6 rounded-lg">
         <div className="grid grid-cols-3 gap-4">
           <input
@@ -92,6 +107,65 @@ export default function CRM() {
           </button>
         </div>
       </form>
+
+      {/* Edit Customer Form */}
+      {editCustomer && (
+        <form onSubmit={handleEditCustomer} className="mb-8 bg-gray-800 p-6 rounded-lg">
+          <div className="grid grid-cols-3 gap-4">
+            <input
+              type="text"
+              value={editCustomer.name}
+              onChange={(e) => setEditCustomer({ ...editCustomer, name: e.target.value })}
+              className="p-2 rounded bg-gray-700 text-white"
+              required
+            />
+            <input
+              type="email"
+              value={editCustomer.email}
+              onChange={(e) => setEditCustomer({ ...editCustomer, email: e.target.value })}
+              className="p-2 rounded bg-gray-700 text-white"
+              required
+            />
+            <input
+              type="text"
+              value={editCustomer.phone}
+              onChange={(e) => setEditCustomer({ ...editCustomer, phone: e.target.value })}
+              className="p-2 rounded bg-gray-700 text-white"
+              required
+            />
+            <select
+              value={editCustomer.status}
+              onChange={(e) => setEditCustomer({ ...editCustomer, status: e.target.value })}
+              className="p-2 rounded bg-gray-700 text-white"
+            >
+              <option value="Lead">Lead</option>
+              <option value="Pending">Pending</option>
+              <option value="Sold">Sold</option>
+            </select>
+            <select
+              value={editCustomer.tags}
+              onChange={(e) => setEditCustomer({ ...editCustomer, tags: e.target.value })}
+              className="p-2 rounded bg-gray-700 text-white"
+            >
+              <option value="Residential">Residential</option>
+              <option value="Commercial">Commercial</option>
+              <option value="Driveway">Driveway</option>
+            </select>
+            <button type="submit" className="btn-yellow">
+              Update Customer
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditCustomer(null)}
+              className="btn-yellow bg-red-500 hover:bg-red-600"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Customer Table */}
       <table className="table">
         <thead>
           <tr>
@@ -100,6 +174,7 @@ export default function CRM() {
             <th>Phone</th>
             <th>Status</th>
             <th>Tags</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -110,6 +185,14 @@ export default function CRM() {
               <td>{customer.phone}</td>
               <td>{customer.status}</td>
               <td>{customer.tags}</td>
+              <td>
+                <button
+                  onClick={() => setEditCustomer(customer)}
+                  className="btn-yellow mr-2"
+                >
+                  Edit
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>

@@ -29,6 +29,7 @@ export default function Estimates() {
     cost: 0,
     status: 'Draft',
   });
+  const [editEstimate, setEditEstimate] = useState<Estimate | null>(null);
   const pdfRef = useRef<HTMLDivElement>(null);
 
   const fetchCustomers = async () => {
@@ -53,10 +54,27 @@ export default function Estimates() {
       customer_id: parseInt(newEstimate.customer_id),
       cost: parseFloat(newEstimate.cost.toString()),
     }]);
-    if (error) {
-      console.error(error);
-    } else {
+    if (error) console.error('Estimate Insert Error:', error);
+    else {
       setNewEstimate({ project_name: '', customer_id: '', description: '', cost: 0, status: 'Draft' });
+      fetchEstimates();
+    }
+  };
+
+  const handleEditEstimate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editEstimate) return;
+    const { error } = await supabase
+      .from('estimates')
+      .update({
+        ...editEstimate,
+        customer_id: parseInt(editEstimate.customer_id.toString()),
+        cost: parseFloat(editEstimate.cost.toString()),
+      })
+      .eq('id', editEstimate.id);
+    if (error) console.error('Estimate Update Error:', error);
+    else {
+      setEditEstimate(null);
       fetchEstimates();
     }
   };
@@ -64,17 +82,20 @@ export default function Estimates() {
   const generatePDF = async (estimate: Estimate) => {
     const element = pdfRef.current;
     if (!element) return;
-
-    // Use html2canvas to capture the estimate UI
+    element.innerHTML = `
+      <div style="padding: 20px; background: #1f2937; color: white;">
+        <h1 style="font-size: 24px; margin-bottom: 10px;">LG Asphalt Estimate</h1>
+        <p><strong>Project:</strong> ${estimate.project_name}</p>
+        <p><strong>Description:</strong> ${estimate.description}</p>
+        <p><strong>Cost:</strong> $${estimate.cost}</p>
+        <p><strong>Status:</strong> ${estimate.status}</p>
+      </div>
+    `;
     const canvas = await html2canvas(element, { scale: 2 });
     const imgData = canvas.toDataURL('image/png');
-
-    // Create a new PDF
     const doc = new jsPDF('p', 'mm', 'a4');
-    const imgWidth = 190; // Width in mm (A4 width is 210mm, leaving 10mm margins)
+    const imgWidth = 190;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    // Add the captured image to the PDF
     doc.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
     doc.save(`${estimate.project_name}_estimate.pdf`);
   };
@@ -82,6 +103,7 @@ export default function Estimates() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-8">Estimates</h1>
+      {/* Add Estimate Form */}
       <form onSubmit={handleAddEstimate} className="mb-8 bg-gray-800 p-6 rounded-lg">
         <div className="grid grid-cols-2 gap-4">
           <input
@@ -133,6 +155,67 @@ export default function Estimates() {
           </button>
         </div>
       </form>
+
+      {/* Edit Estimate Form */}
+      {editEstimate && (
+        <form onSubmit={handleEditEstimate} className="mb-8 bg-gray-800 p-6 rounded-lg">
+          <div className="grid grid-cols-2 gap-4">
+            <input
+              type="text"
+              value={editEstimate.project_name}
+              onChange={(e) => setEditEstimate({ ...editEstimate, project_name: e.target.value })}
+              className="p-2 rounded bg-gray-700 text-white"
+              required
+            />
+            <select
+              value={editEstimate.customer_id}
+              onChange={(e) => setEditEstimate({ ...editEstimate, customer_id: parseInt(e.target.value) })}
+              className="p-2 rounded bg-gray-700 text-white"
+              required
+            >
+              <option value="">Select Customer</option>
+              {customers.map((customer) => (
+                <option key={customer.id} value={customer.id}>
+                  {customer.name}
+                </option>
+              ))}
+            </select>
+            <textarea
+              value={editEstimate.description}
+              onChange={(e) => setEditEstimate({ ...editEstimate, description: e.target.value })}
+              className="p-2 rounded bg-gray-700 text-white col-span-2"
+              required
+            />
+            <input
+              type="number"
+              value={editEstimate.cost}
+              onChange={(e) => setEditEstimate({ ...editEstimate, cost: parseFloat(e.target.value) })}
+              className="p-2 rounded bg-gray-700 text-white"
+              required
+            />
+            <select
+              value={editEstimate.status}
+              onChange={(e) => setEditEstimate({ ...editEstimate, status: e.target.value })}
+              className="p-2 rounded bg-gray-700 text-white"
+            >
+              <option value="Draft">Draft</option>
+              <option value="Final">Final</option>
+            </select>
+            <button type="submit" className="btn-yellow">
+              Update Estimate
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditEstimate(null)}
+              className="btn-yellow bg-red-500 hover:bg-red-600"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Estimates Table */}
       <table className="table">
         <thead>
           <tr>
@@ -152,21 +235,13 @@ export default function Estimates() {
               <td>{estimate.status}</td>
               <td>
                 <button
-                  onClick={() => {
-                    // Populate the hidden div with the current estimate data for PDF generation
-                    if (pdfRef.current) {
-                      pdfRef.current.innerHTML = `
-                        <div style="padding: 20px; background: #1f2937; color: white;">
-                          <h1 style="font-size: 24px; margin-bottom: 10px;">LG Asphalt Estimate</h1>
-                          <p><strong>Project:</strong> ${estimate.project_name}</p>
-                          <p><strong>Description:</strong> ${estimate.description}</p>
-                          <p><strong>Cost:</strong> $${estimate.cost}</p>
-                          <p><strong>Status:</strong> ${estimate.status}</p>
-                        </div>
-                      `;
-                    }
-                    generatePDF(estimate);
-                  }}
+                  onClick={() => setEditEstimate(estimate)}
+                  className="btn-yellow mr-2"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => generatePDF(estimate)}
                   className="btn-yellow"
                 >
                   Download PDF
@@ -176,7 +251,6 @@ export default function Estimates() {
           ))}
         </tbody>
       </table>
-      {/* Hidden div for PDF rendering */}
       <div ref={pdfRef} style={{ position: 'absolute', left: '-9999px', top: '-9999px' }} />
     </div>
   );
