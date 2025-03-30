@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { useRouter } from 'next/navigation';
 
 type Customer = {
   id: number;
@@ -21,16 +22,15 @@ type Estimate = {
   asphalt_thickness?: string;
 };
 
-// Modal Component (Reused from Projects page)
 function Modal({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: React.ReactNode }) {
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 p-6 rounded-lg shadow-lg w-1/2">
+      <div className="bg-gray-800 p-6 rounded-xl shadow-xl w-1/2">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Edit Estimate</h2>
-          <button onClick={onClose} className="text-red-500 hover:text-red-700">
+          <h2 className="text-xl font-bold text-yellow-500">Edit Estimate</h2>
+          <button onClick={onClose} className="text-red-500 hover:text-red-700 transition-colors duration-200">
             Close
           </button>
         </div>
@@ -57,6 +57,7 @@ export default function Estimates() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const pdfRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -90,8 +91,8 @@ export default function Estimates() {
   }, []);
 
   const calculateCost = (squareFootage: number, asphaltThickness: string) => {
-    const baseRate = 2; // $2 per square foot
-    const thicknessMultiplier = asphaltThickness === '2' ? 1 : asphaltThickness === '3' ? 1.2 : 1.5; // 2" = 1x, 3" = 1.2x, 4" = 1.5x
+    const baseRate = 2;
+    const thicknessMultiplier = asphaltThickness === '2' ? 1 : asphaltThickness === '3' ? 1.2 : 1.5;
     return squareFootage * baseRate * thicknessMultiplier;
   };
 
@@ -110,7 +111,7 @@ export default function Estimates() {
       setError('All fields are required.');
       return false;
     }
-    const squareFootage = estimate.squareFootage ?? 0; // Default to 0 if undefined
+    const squareFootage = estimate.squareFootage ?? 0;
     if (squareFootage <= 0) {
       setError('Square footage must be a positive number.');
       return false;
@@ -126,7 +127,7 @@ export default function Estimates() {
     setLoading(true);
     const { error } = await supabase.from('estimates').insert([{
       ...newEstimate,
-      customer_id: parseInt(newEstimate.customer_id), // Convert to number for Supabase
+      customer_id: parseInt(newEstimate.customer_id),
       cost: parseFloat(newEstimate.cost.toString()),
       square_footage: newEstimate.squareFootage,
     }]);
@@ -151,7 +152,7 @@ export default function Estimates() {
       .from('estimates')
       .update({
         ...editEstimate,
-        customer_id: parseInt(editEstimate.customer_id.toString()), // Ensure it's a number
+        customer_id: parseInt(editEstimate.customer_id.toString()),
         cost: parseFloat(editEstimate.cost.toString()),
         square_footage: editEstimate.squareFootage ?? 0,
       })
@@ -163,6 +164,33 @@ export default function Estimates() {
       setEditEstimate(null);
       setIsModalOpen(false);
       fetchEstimates();
+    }
+    setLoading(false);
+  };
+
+  const generateWorkOrder = async (estimate: Estimate) => {
+    if (estimate.status !== 'Final') {
+      setError('Work Orders can only be generated for Final estimates.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    const workOrderData = {
+      estimate_id: estimate.id,
+      project_name: estimate.project_name,
+      customer_id: estimate.customer_id,
+      description: estimate.description,
+      assigned_to: '',
+      status: 'Open',
+    };
+
+    const { error } = await supabase.from('work_orders').insert([workOrderData]);
+    if (error) {
+      setError('Failed to generate work order. Please try again.');
+      console.error('Work Order Insert Error:', error);
+    } else {
+      router.push('/work-orders');
     }
     setLoading(false);
   };
@@ -195,20 +223,20 @@ export default function Estimates() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-8">Estimates</h1>
-      <form onSubmit={handleAddEstimate} className="mb-8 bg-gray-800 p-6 rounded-lg">
+      <form onSubmit={handleAddEstimate} className="mb-8 bg-gray-800 p-6 rounded-xl shadow-lg">
         <div className="grid grid-cols-2 gap-4">
           <input
             type="text"
             placeholder="Project Name"
             value={newEstimate.project_name}
             onChange={(e) => setNewEstimate({ ...newEstimate, project_name: e.target.value })}
-            className="p-2 rounded bg-gray-700 text-white"
+            className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
             required
           />
           <select
             value={newEstimate.customer_id}
             onChange={(e) => setNewEstimate({ ...newEstimate, customer_id: e.target.value })}
-            className="p-2 rounded bg-gray-700 text-white"
+            className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
             required
           >
             <option value="">Select Customer</option>
@@ -222,7 +250,7 @@ export default function Estimates() {
             placeholder="Description"
             value={newEstimate.description}
             onChange={(e) => setNewEstimate({ ...newEstimate, description: e.target.value })}
-            className="p-2 rounded bg-gray-700 text-white col-span-2"
+            className="p-2 rounded bg-gray-700 text-white col-span-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
             required
           />
           <input
@@ -230,13 +258,13 @@ export default function Estimates() {
             placeholder="Square Footage"
             value={newEstimate.squareFootage}
             onChange={(e) => handleSquareFootageChange(parseFloat(e.target.value) || 0)}
-            className="p-2 rounded bg-gray-700 text-white"
+            className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
             required
           />
           <select
             value={newEstimate.asphalt_thickness}
             onChange={(e) => handleThicknessChange(e.target.value)}
-            className="p-2 rounded bg-gray-700 text-white"
+            className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
             required
           >
             <option value="2">2 inches</option>
@@ -248,13 +276,13 @@ export default function Estimates() {
             placeholder="Cost"
             value={newEstimate.cost}
             onChange={(e) => setNewEstimate({ ...newEstimate, cost: parseFloat(e.target.value) })}
-            className="p-2 rounded bg-gray-700 text-white"
+            className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
             readOnly
           />
           <select
             value={newEstimate.status}
             onChange={(e) => setNewEstimate({ ...newEstimate, status: e.target.value })}
-            className="p-2 rounded bg-gray-700 text-white"
+            className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
           >
             <option value="Draft">Draft</option>
             <option value="Final">Final</option>
@@ -274,13 +302,13 @@ export default function Estimates() {
                 placeholder="Project Name"
                 value={editEstimate.project_name}
                 onChange={(e) => setEditEstimate({ ...editEstimate, project_name: e.target.value })}
-                className="p-2 rounded bg-gray-700 text-white"
+                className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
                 required
               />
               <select
                 value={editEstimate.customer_id}
                 onChange={(e) => setEditEstimate({ ...editEstimate, customer_id: parseInt(e.target.value) })}
-                className="p-2 rounded bg-gray-700 text-white"
+                className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
                 required
               >
                 <option value="">Select Customer</option>
@@ -294,7 +322,7 @@ export default function Estimates() {
                 placeholder="Description"
                 value={editEstimate.description}
                 onChange={(e) => setEditEstimate({ ...editEstimate, description: e.target.value })}
-                className="p-2 rounded bg-gray-700 text-white col-span-2"
+                className="p-2 rounded bg-gray-700 text-white col-span-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
                 required
               />
               <input
@@ -306,7 +334,7 @@ export default function Estimates() {
                   const cost = calculateCost(squareFootage, editEstimate.asphalt_thickness || '2');
                   setEditEstimate({ ...editEstimate, squareFootage, cost });
                 }}
-                className="p-2 rounded bg-gray-700 text-white"
+                className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
                 required
               />
               <select
@@ -316,7 +344,7 @@ export default function Estimates() {
                   const cost = calculateCost(editEstimate.squareFootage ?? 0, thickness);
                   setEditEstimate({ ...editEstimate, asphalt_thickness: thickness, cost });
                 }}
-                className="p-2 rounded bg-gray-700 text-white"
+                className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
                 required
               >
                 <option value="2">2 inches</option>
@@ -328,13 +356,13 @@ export default function Estimates() {
                 placeholder="Cost"
                 value={editEstimate.cost}
                 onChange={(e) => setEditEstimate({ ...editEstimate, cost: parseFloat(e.target.value) })}
-                className="p-2 rounded bg-gray-700 text-white"
+                className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
                 readOnly
               />
               <select
                 value={editEstimate.status}
                 onChange={(e) => setEditEstimate({ ...editEstimate, status: e.target.value })}
-                className="p-2 rounded bg-gray-700 text-white"
+                className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
               >
                 <option value="Draft">Draft</option>
                 <option value="Final">Final</option>
@@ -347,21 +375,21 @@ export default function Estimates() {
           </form>
         )}
       </Modal>
-      {loading && <p className="text-yellow-500 mb-4">Loading...</p>}
+      {loading && <p className="text-yellow-500 mb-4 animate-pulse">Loading...</p>}
       {error && <p className="text-red-500 mb-4">{error}</p>}
-      <table className="table">
+      <table className="table w-full">
         <thead>
           <tr>
-            <th>Project Name</th>
-            <th>Description</th>
-            <th>Cost</th>
-            <th>Status</th>
-            <th>Actions</th>
+            <th className="text-left">Project Name</th>
+            <th className="text-left">Description</th>
+            <th className="text-left">Cost</th>
+            <th className="text-left">Status</th>
+            <th className="text-left">Actions</th>
           </tr>
         </thead>
         <tbody>
           {estimates.map((estimate) => (
-            <tr key={estimate.id}>
+            <tr key={estimate.id} className="hover:bg-gray-700 transition-colors duration-200">
               <td>{estimate.project_name}</td>
               <td>{estimate.description}</td>
               <td>${estimate.cost}</td>
@@ -378,9 +406,16 @@ export default function Estimates() {
                 </button>
                 <button
                   onClick={() => generatePDF(estimate)}
-                  className="btn-yellow"
+                  className="btn-yellow mr-2"
                 >
                   Download PDF
+                </button>
+                <button
+                  onClick={() => generateWorkOrder(estimate)}
+                  className="btn-yellow"
+                  disabled={estimate.status !== 'Final'}
+                >
+                  Generate Work Order
                 </button>
               </td>
             </tr>

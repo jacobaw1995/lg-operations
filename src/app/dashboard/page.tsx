@@ -8,6 +8,8 @@ type Project = {
   id: number;
   name: string;
   status: string;
+  customer_id: number;
+  customer: { name: string };
 };
 
 type Task = {
@@ -16,12 +18,27 @@ type Task = {
   task: string;
   deadline: string;
   status: string;
-  project: { name: string }[]; // Updated to reflect Supabase's array return type
+  project: { name: string };
+  assigned_to: string;
+};
+
+type Customer = {
+  id: number;
+  name: string;
+  status: string;
 };
 
 export default function Dashboard() {
   const [activeProjects, setActiveProjects] = useState<Project[]>([]);
   const [overdueTasks, setOverdueTasks] = useState<Task[]>([]);
+  const [salesPipeline, setSalesPipeline] = useState<{ [key: string]: Customer[] }>({
+    Lead: [],
+    Pending: [],
+    Sold: [],
+    Lost: [],
+    'In Production': [],
+    Complete: [],
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -32,7 +49,7 @@ export default function Dashboard() {
     // Fetch active projects (status not 'Complete')
     const { data: projectsData, error: projectsError } = await supabase
       .from('projects')
-      .select('id, name, status')
+      .select('id, name, status, customer_id, customer:customers(name)')
       .neq('status', 'Complete');
     if (projectsError) {
       setError('Failed to load dashboard data. Please try again.');
@@ -45,7 +62,7 @@ export default function Dashboard() {
     const today = new Date().toISOString().split('T')[0];
     const { data: tasksData, error: tasksError } = await supabase
       .from('tasks')
-      .select('id, project_id, task, deadline, status, project:projects(name)')
+      .select('id, project_id, task, deadline, status, project:projects(name), assigned_to')
       .lt('deadline', today)
       .neq('status', 'Done');
     if (tasksError) {
@@ -53,6 +70,28 @@ export default function Dashboard() {
       console.error('Error fetching tasks:', tasksError);
     } else {
       setOverdueTasks(tasksData || []);
+    }
+
+    // Fetch customers for sales pipeline
+    const { data: customersData, error: customersError } = await supabase
+      .from('customers')
+      .select('id, name, status');
+    if (customersError) {
+      setError('Failed to load dashboard data. Please try again.');
+      console.error('Error fetching customers:', customersError);
+    } else {
+      const pipeline: { [key: string]: Customer[] } = {
+        Lead: [],
+        Pending: [],
+        Sold: [],
+        Lost: [],
+        'In Production': [],
+        Complete: [],
+      };
+      customersData?.forEach((customer) => {
+        pipeline[customer.status].push(customer);
+      });
+      setSalesPipeline(pipeline);
     }
 
     setLoading(false);
@@ -65,64 +104,91 @@ export default function Dashboard() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
-      {loading && <p className="text-yellow-500 mb-4">Fetching data...</p>}
+      {loading && <p className="text-yellow-500 mb-4 animate-pulse">Fetching data...</p>}
       {error && <p className="text-red-500 mb-4">{error}</p>}
       {!loading && !error && (
-        <div className="grid grid-cols-2 gap-8">
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-bold mb-4">Active Projects ({activeProjects.length})</h2>
-            {activeProjects.length > 0 ? (
-              <table className="table w-full">
-                <thead>
-                  <tr>
-                    <th>Project Name</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeProjects.map((project) => (
-                    <tr key={project.id}>
-                      <td>
-                        <Link href={`/projects?selected=${project.id}`} className="text-yellow-500 hover:underline">
-                          {project.name}
-                        </Link>
-                      </td>
-                      <td>{project.status}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <p>No active projects.</p>
-            )}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Sales Pipeline */}
+          <div className="bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <h2 className="text-xl font-bold mb-4 text-yellow-500">Sales Pipeline</h2>
+            <div className="grid grid-cols-2 gap-4">
+              {Object.keys(salesPipeline).map((status) => (
+                <div key={status} className="bg-gray-700 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold mb-2 text-white">{status} ({salesPipeline[status].length})</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {salesPipeline[status].slice(0, 3).map((customer) => (
+                      <li key={customer.id} className="text-sm text-gray-300">{customer.name}</li>
+                    ))}
+                    {salesPipeline[status].length > 3 && (
+                      <li className="text-sm text-gray-400">+{salesPipeline[status].length - 3} more</li>
+                    )}
+                  </ul>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-bold mb-4">Overdue Tasks ({overdueTasks.length})</h2>
+
+          {/* Overdue Tasks */}
+          <div className="bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <h2 className="text-xl font-bold mb-4 text-yellow-500">Overdue Tasks ({overdueTasks.length})</h2>
             {overdueTasks.length > 0 ? (
               <table className="table w-full">
                 <thead>
                   <tr>
-                    <th>Task</th>
-                    <th>Project</th>
-                    <th>Deadline</th>
+                    <th className="text-left">Task</th>
+                    <th className="text-left">Project</th>
+                    <th className="text-left">Assigned To</th>
+                    <th className="text-left">Deadline</th>
                   </tr>
                 </thead>
                 <tbody>
                   {overdueTasks.map((task) => (
-                    <tr key={task.id}>
+                    <tr key={task.id} className="hover:bg-gray-700 transition-colors duration-200">
                       <td>{task.task}</td>
                       <td>
                         <Link href={`/projects?selected=${task.project_id}`} className="text-yellow-500 hover:underline">
-                          {task.project[0]?.name || 'Unknown Project'} {/* Access first project name */}
+                          {task.project.name}
                         </Link>
                       </td>
+                      <td>{task.assigned_to}</td>
                       <td>{task.deadline}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             ) : (
-              <p>No overdue tasks.</p>
+              <p className="text-gray-400">No overdue tasks.</p>
+            )}
+          </div>
+
+          {/* Active Projects */}
+          <div className="bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <h2 className="text-xl font-bold mb-4 text-yellow-500">Active Projects ({activeProjects.length})</h2>
+            {activeProjects.length > 0 ? (
+              <table className="table w-full">
+                <thead>
+                  <tr>
+                    <th className="text-left">Project Name</th>
+                    <th className="text-left">Customer</th>
+                    <th className="text-left">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeProjects.map((project) => (
+                    <tr key={project.id} className="hover:bg-gray-700 transition-colors duration-200">
+                      <td>
+                        <Link href={`/projects?selected=${project.id}`} className="text-yellow-500 hover:underline">
+                          {project.name}
+                        </Link>
+                      </td>
+                      <td>{project.customer.name}</td>
+                      <td>{project.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="text-gray-400">No active projects.</p>
             )}
           </div>
         </div>
