@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
-import * as Konva from 'react-konva'; // Import for event types
-import React from 'react'; // Add React import
+import * as Konva from 'react-konva';
+import React from 'react';
 
 const Stage = dynamic(() => import('react-konva').then((mod) => mod.Stage), { ssr: false });
 const Layer = dynamic(() => import('react-konva').then((mod) => mod.Layer), { ssr: false });

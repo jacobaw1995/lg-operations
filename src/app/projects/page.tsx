@@ -60,7 +60,7 @@ type ActivityLog = {
   entity_type: string;
   entity_id: number;
   action: string;
-  details: { [key: string]: unknown }; // Replaced 'any' with 'unknown'
+  details: { [key: string]: unknown };
   created_at: string;
   created_by: string;
 };
@@ -89,14 +89,12 @@ function SortableTask({
   onDelete,
   resources,
   onAssignResource,
-  setTaskPosition,
 }: {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (taskId: number) => void;
   resources: Resource[];
   onAssignResource: (taskId: number, resourceId: number) => void;
-  setTaskPosition: (taskId: number, x: number, y: number, width: number, height: number) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task.id });
 
@@ -105,17 +103,9 @@ function SortableTask({
     transition,
   };
 
-  const handleRef = (node: HTMLDivElement | null) => {
-    setNodeRef(node);
-    if (node) {
-      const rect = node.getBoundingClientRect();
-      setTaskPosition(task.id, rect.left, rect.top, rect.width, rect.height);
-    }
-  };
-
   return (
     <div
-      ref={handleRef}
+      ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
@@ -159,7 +149,6 @@ export default function Projects() {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [selectedVendors, setSelectedVendors] = useState<number[]>([]);
-  const [taskPositions] = useState<{ [key: number]: { x: number; y: number; width: number; height: number } }>({}); // Removed setTaskPositions if unused
   const [newProject, setNewProject] = useState({ name: '' });
   const [newTask, setNewTask] = useState({ task: '', status: 'To Do', deadline: '', start_date: '', end_date: '', assigned_to: '', dependencies: [] as number[], contractor_id: 0, milestone_id: 0 });
   const [newMilestone, setNewMilestone] = useState({ name: '', date: '' });
@@ -179,10 +168,6 @@ export default function Projects() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
-
-  const setTaskPosition = (taskId: number, x: number, y: number, width: number, height: number) => {
-    // Keep this function for SortableTask even if taskPositions isn't used directly here
-  };
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
@@ -501,7 +486,7 @@ export default function Projects() {
     setLoading(false);
   };
 
-  const handleUpdateTaskDates = async (taskId: number, startDate: string, endDate: string) => {
+  const handleUpdateTaskDatesλι = async (taskId: number, startDate: string, endDate: string) => {
     setLoading(true);
     setError('');
     const task = tasks.find((t) => t.id === taskId);
@@ -970,7 +955,6 @@ export default function Projects() {
                                 onDelete={handleDeleteTask}
                                 resources={resources}
                                 onAssignResource={handleAssignResource}
-                                setTaskPosition={setTaskPosition}
                               />
                             ))}
                           </SortableContext>
