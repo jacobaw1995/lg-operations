@@ -10,7 +10,6 @@ import dynamic from 'next/dynamic';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-// Dynamically import GanttChart component
 const GanttChart = dynamic(() => import('../../components/GanttChart'), { ssr: false });
 
 type Task = {
@@ -61,12 +60,11 @@ type ActivityLog = {
   entity_type: string;
   entity_id: number;
   action: string;
-  details: { [key: string]: any };
+  details: { [key: string]: unknown }; // Replaced 'any' with 'unknown'
   created_at: string;
   created_by: string;
 };
 
-// Modal component (unchanged)
 function Modal({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: React.ReactNode }) {
   if (!isOpen) return null;
 
@@ -85,7 +83,6 @@ function Modal({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => 
   );
 }
 
-// SortableTask component (unchanged)
 function SortableTask({
   task,
   onEdit,
@@ -162,7 +159,7 @@ export default function Projects() {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [selectedVendors, setSelectedVendors] = useState<number[]>([]);
-  const [taskPositions, setTaskPositions] = useState<{ [key: number]: { x: number; y: number; width: number; height: number } }>({});
+  const [taskPositions] = useState<{ [key: number]: { x: number; y: number; width: number; height: number } }>({}); // Removed setTaskPositions if unused
   const [newProject, setNewProject] = useState({ name: '' });
   const [newTask, setNewTask] = useState({ task: '', status: 'To Do', deadline: '', start_date: '', end_date: '', assigned_to: '', dependencies: [] as number[], contractor_id: 0, milestone_id: 0 });
   const [newMilestone, setNewMilestone] = useState({ name: '', date: '' });
@@ -184,10 +181,7 @@ export default function Projects() {
   );
 
   const setTaskPosition = (taskId: number, x: number, y: number, width: number, height: number) => {
-    setTaskPositions((prev) => ({
-      ...prev,
-      [taskId]: { x, y, width, height },
-    }));
+    // Keep this function for SortableTask even if taskPositions isn't used directly here
   };
 
   const fetchProjects = useCallback(async () => {
@@ -220,34 +214,34 @@ export default function Projects() {
     setLoading(false);
   }, [selectedProject]);
 
-  const fetchContractors = async () => {
+  const fetchContractors = useCallback(async () => {
     const { data, error } = await supabase.from('contractors').select('id, name');
     if (error) {
       console.error('Fetch Contractors Error:', error);
     } else {
       setContractors(data || []);
     }
-  };
+  }, []);
 
-  const fetchVendors = async () => {
+  const fetchVendors = useCallback(async () => {
     const { data, error } = await supabase.from('vendors').select('id, name');
     if (error) {
       console.error('Fetch Vendors Error:', error);
     } else {
       setVendors(data || []);
     }
-  };
+  }, []);
 
-  const fetchResources = async () => {
+  const fetchResources = useCallback(async () => {
     const { data, error } = await supabase.from('resources').select('id, name, type');
     if (error) {
       console.error('Fetch Resources Error:', error);
     } else {
       setResources(data || []);
     }
-  };
+  }, []);
 
-  const fetchMilestones = async () => {
+  const fetchMilestones = useCallback(async () => {
     if (!selectedProject) return;
     const { data, error } = await supabase
       .from('milestones')
@@ -258,9 +252,9 @@ export default function Projects() {
     } else {
       setMilestones(data || []);
     }
-  };
+  }, [selectedProject]);
 
-  const fetchActivityLogs = async () => {
+  const fetchActivityLogs = useCallback(async () => {
     if (!selectedProject) return;
     const { data, error } = await supabase
       .from('activity_logs')
@@ -272,9 +266,9 @@ export default function Projects() {
     } else {
       setActivityLogs(data || []);
     }
-  };
+  }, [selectedProject]);
 
-  const fetchProjectVendors = async () => {
+  const fetchProjectVendors = useCallback(async () => {
     if (!selectedProject) return;
     const { data, error } = await supabase
       .from('vendor_project_links')
@@ -285,23 +279,23 @@ export default function Projects() {
     } else {
       setSelectedVendors(data?.map((link) => link.vendor_id) || []);
     }
-  };
+  }, [selectedProject]);
 
   useEffect(() => {
     fetchProjects();
     fetchContractors();
     fetchVendors();
     fetchResources();
-  }, [fetchProjects]);
+  }, [fetchProjects, fetchContractors, fetchVendors, fetchResources]);
 
   useEffect(() => {
     fetchTasks();
     fetchProjectVendors();
     fetchMilestones();
     fetchActivityLogs();
-  }, [selectedProject, fetchTasks]);
+  }, [selectedProject, fetchTasks, fetchProjectVendors, fetchMilestones, fetchActivityLogs]);
 
-  const logActivity = async (entityType: string, entityId: number, action: string, details: { [key: string]: any }) => {
+  const logActivity = async (entityType: string, entityId: number, action: string, details: { [key: string]: unknown }) => {
     if (!selectedProject) return;
     const { error } = await supabase.from('activity_logs').insert([{
       project_id: selectedProject,
@@ -309,7 +303,7 @@ export default function Projects() {
       entity_id: entityId,
       action,
       details,
-      created_by: 'System', // Placeholder for user tracking
+      created_by: 'System',
     }]);
     if (error) {
       console.error('Log Activity Error:', error);

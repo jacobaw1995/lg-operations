@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
+import * as Konva from 'react-konva'; // Import for event types
+import React from 'react'; // Add React import
 
-// Dynamically import react-konva components
 const Stage = dynamic(() => import('react-konva').then((mod) => mod.Stage), { ssr: false });
 const Layer = dynamic(() => import('react-konva').then((mod) => mod.Layer), { ssr: false });
 const Rect = dynamic(() => import('react-konva').then((mod) => mod.Rect), { ssr: false });
@@ -99,7 +100,6 @@ export default function GanttChart({
 
     const forwardPass = () => {
       tasks.forEach((task) => {
-        const startOffset = (new Date(task.start_date).getTime() - earliestDate.getTime()) / (1000 * 60 * 60 * 24);
         task.dependencies.forEach((depId) => {
           const depEnd = earliestStart[depId] + taskDurations[depId];
           if (depEnd > earliestStart[task.id]) {
@@ -141,7 +141,7 @@ export default function GanttChart({
     setDraggingTask(taskId);
   };
 
-  const handleDragMove = (e: any, taskId: number) => {
+  const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>, taskId: number) => {
     if (draggingTask !== taskId) return;
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
@@ -167,7 +167,7 @@ export default function GanttChart({
     setLinkEndY(y);
   };
 
-  const handleLinkMove = (e: any) => {
+  const handleLinkMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (!linkingTask) return;
     setLinkEndX(e.evt.layerX);
     setLinkEndY(e.evt.layerY);

@@ -62,7 +62,7 @@ export default function CRM() {
 
   useEffect(() => {
     fetchCustomers();
-  }, [filterStatus, filterTags]);
+  }, [fetchCustomers, filterStatus, filterTags]);
 
   const handleAddCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
