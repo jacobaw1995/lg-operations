@@ -8,7 +8,7 @@ type Customer = {
   name: string;
   email: string;
   status: string;
-  tags: string[];
+  tags: string[] | null | undefined; // Allow null/undefined
 };
 
 function Modal({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: React.ReactNode }) {
@@ -238,7 +238,7 @@ export default function CRM() {
               <input
                 type="text"
                 placeholder="Tags (comma-separated)"
-                value={editCustomer.tags.join(', ')}
+                value={editCustomer.tags?.join(', ') ?? ''}
                 onChange={(e) => setEditCustomer({ ...editCustomer, tags: e.target.value.split(',').map((tag) => tag.trim()) })}
                 className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
               />
@@ -268,7 +268,7 @@ export default function CRM() {
               <td>{customer.name}</td>
               <td>{customer.email}</td>
               <td>{customer.status}</td>
-              <td>{customer.tags.join(', ')}</td>
+              <td>{Array.isArray(customer.tags) ? customer.tags.join(', ') : customer.tags ?? ''}</td> {/* Handle non-array tags */}
               <td>
                 <button
                   onClick={() => {

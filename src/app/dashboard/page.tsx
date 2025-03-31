@@ -9,7 +9,7 @@ type Project = {
   name: string;
   status: string;
   customer_id: number;
-  customer: { name: string };
+  customer: { name: string } | null; // Update type to allow null
 };
 
 type Task = {
@@ -181,7 +181,7 @@ export default function Dashboard() {
                           {project.name}
                         </Link>
                       </td>
-                      <td>{project.customer.name}</td>
+                      <td>{project.customer?.name ?? 'No Customer'}</td> {/* Handle null customer */}
                       <td>{project.status}</td>
                     </tr>
                   ))}

@@ -1,7 +1,12 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  /* config options here */
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  webpack: (config, { isServer }) => {
+    // Mock the 'canvas' module for server-side builds
+    if (isServer) {
+      config.resolve.alias['canvas'] = false;
+    }
+    return config;
+  },
 };
 
-export default nextConfig;
+module.exports = nextConfig;
