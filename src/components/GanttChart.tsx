@@ -1,4 +1,6 @@
-import React, { useState } from 'react'; // Added explicit React import
+'use client'; // Added to ensure this component is client-side only
+
+import React, { useState } from 'react';
 import { Stage, Layer, Rect, Text, Line } from 'react-konva';
 import { KonvaEventObject } from 'konva/lib/Node';
 
@@ -44,7 +46,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
   const [linkEndX, setLinkEndX] = useState<number | null>(null);
   const [linkEndY, setLinkEndY] = useState<number | null>(null);
   const [hoveredTask, setHoveredTask] = useState<number | null>(null);
-  const [dragStartX, setDragStartX] = useState<number | null>(null); // Track initial X position for drag
+  const [dragStartX, setDragStartX] = useState<number | null>(null);
 
   const earliestDate = tasks.reduce((earliest, task) => {
     const start = new Date(task.start_date);
@@ -138,7 +140,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
     const task = tasks.find((t) => t.id === taskId);
     if (task) {
       const { x } = getTaskPosition(task);
-      setDragStartX(x + 150); // Store the initial X position (adjusted for offset)
+      setDragStartX(x + 150);
     }
     setDraggingTask(taskId);
   };
@@ -148,9 +150,9 @@ const GanttChart: React.FC<GanttChartProps> = ({
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    const currentX = e.target.x(); // Get the current X position of the dragged node
-    const deltaX = currentX - dragStartX; // Calculate the change in X position
-    const deltaDays = deltaX / pixelsPerDay; // Convert the pixel change to days
+    const currentX = e.target.x();
+    const deltaX = currentX - dragStartX;
+    const deltaDays = deltaX / pixelsPerDay;
 
     const newStart = new Date(task.start_date);
     newStart.setDate(newStart.getDate() + Math.round(deltaDays));
