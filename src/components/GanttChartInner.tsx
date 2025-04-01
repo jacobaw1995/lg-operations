@@ -98,7 +98,7 @@ const GanttChartInner: React.FC<GanttChartInnerProps> = ({
 
     const forwardPass = () => {
       tasks.forEach((task) => {
-        const startOffset = (new Date(task.start_date).getTime() - earliestDate.getTime()) / (1000 * 60 * 60 * 24);
+        // Removed unused startOffset variable
         task.dependencies.forEach((depId) => {
           const depEnd = earliestStart[depId] + taskDurations[depId];
           if (depEnd > earliestStart[task.id]) {
@@ -242,7 +242,7 @@ const GanttChartInner: React.FC<GanttChartInnerProps> = ({
                   onDragStart={() => handleDragStart(task.id)}
                   onDragMove={(e) => handleDragMove(e, task.id)}
                   onDragEnd={handleDragEnd}
-                  onMouseDown={(e) => handleLinkStart(task.id, x + 150 + width, y + taskHeight / 2)}
+                  onMouseDown={() => handleLinkStart(task.id, x + 150 + width, y + taskHeight / 2)} // Removed unused 'e' parameter
                   onMouseUp={() => handleLinkEnd(task.id)}
                   onMouseEnter={() => setHoveredTask(task.id)}
                   onMouseLeave={() => setHoveredTask(null)}

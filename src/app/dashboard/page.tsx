@@ -28,6 +28,25 @@ type Customer = {
   status: string;
 };
 
+// Add RawProject type alongside RawTask
+type RawProject = {
+  id: number;
+  name: string;
+  status: string;
+  customer_id: number;
+  customer: { name: string }[] | { name: string };
+};
+
+type RawTask = {
+  id: number;
+  project_id: number;
+  task: string;
+  deadline: string;
+  status: string;
+  project: { name: string }[] | { name: string };
+  assigned_to: string;
+};
+
 export default function Dashboard() {
   const [activeProjects, setActiveProjects] = useState<Project[]>([]);
   const [overdueTasks, setOverdueTasks] = useState<Task[]>([]);
@@ -55,7 +74,11 @@ export default function Dashboard() {
       setError('Failed to load dashboard data. Please try again.');
       console.error('Error fetching projects:', projectsError);
     } else {
-      setActiveProjects((projectsData as unknown as Project[]) || []);
+      const mappedProjects = (projectsData as unknown as RawProject[]).map((project) => ({
+        ...project,
+        customer: Array.isArray(project.customer) ? project.customer[0] || { name: '' } : project.customer,
+      })) as Project[];
+      setActiveProjects(mappedProjects || []);
     }
 
     // Fetch overdue tasks (deadline < today and status not 'Done')
@@ -69,8 +92,7 @@ export default function Dashboard() {
       setError('Failed to load dashboard data. Please try again.');
       console.error('Error fetching tasks:', tasksError);
     } else {
-      // Map the response to ensure project is an object, not an array
-      const mappedTasks = (tasksData as unknown as any[]).map((task) => ({
+      const mappedTasks = (tasksData as unknown as RawTask[]).map((task) => ({
         ...task,
         project: Array.isArray(task.project) ? task.project[0] || { name: '' } : task.project,
       })) as Task[];

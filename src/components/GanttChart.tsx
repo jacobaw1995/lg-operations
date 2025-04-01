@@ -3,6 +3,15 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 
+// Define the props type for GanttChartInner
+type GanttChartInnerProps = {
+  tasks: Task[];
+  milestones: Milestone[];
+  onUpdateTaskDates: (taskId: number, startDate: string, endDate: string) => void;
+  onUpdateDependencies: (taskId: number, dependencies: number[]) => void;
+};
+
+// Define the types for Task and Milestone (same as in GanttChartInner.tsx)
 type Task = {
   id: number;
   project_id: number;
@@ -25,17 +34,12 @@ type Milestone = {
   linked_tasks: number[];
 };
 
-type GanttChartProps = {
-  tasks: Task[];
-  milestones: Milestone[];
-  onUpdateTaskDates: (taskId: number, startDate: string, endDate: string) => void;
-  onUpdateDependencies: (taskId: number, dependencies: number[]) => void;
-};
+type GanttChartProps = GanttChartInnerProps;
 
-// Dynamically import the inner GanttChart component with SSR disabled
+// Dynamically import the inner GanttChart component with SSR disabled and correct typing
 const GanttChartInner = dynamic(() => import('./GanttChartInner'), {
   ssr: false,
-});
+}) as React.FC<GanttChartInnerProps>;
 
 const GanttChart: React.FC<GanttChartProps> = ({
   tasks,
