@@ -92,7 +92,12 @@ export default function Vendors() {
       setError('Failed to load vendor orders. Please try again.');
       console.error('Fetch Vendor Orders Error:', error);
     } else {
-      setVendorOrders(data || []);
+      // Map the response to ensure project is an object
+      const mappedData = data.map((order) => ({
+        ...order,
+        project: Array.isArray(order.project) ? order.project[0] || { name: '' } : order.project,
+      }));
+      setVendorOrders(mappedData || []);
     }
     setLoading(false);
   };
