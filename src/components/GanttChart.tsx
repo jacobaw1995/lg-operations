@@ -1,15 +1,6 @@
-'use client';
-
-import { useState } from 'react';
-import dynamic from 'next/dynamic';
-import * as Konva from 'react-konva';
-import React from 'react';
-
-const Stage = dynamic(() => import('react-konva').then((mod) => mod.Stage), { ssr: false });
-const Layer = dynamic(() => import('react-konva').then((mod) => mod.Layer), { ssr: false });
-const Rect = dynamic(() => import('react-konva').then((mod) => mod.Rect), { ssr: false });
-const Text = dynamic(() => import('react-konva').then((mod) => mod.Text), { ssr: false });
-const Line = dynamic(() => import('react-konva').then((mod) => mod.Line), { ssr: false });
+import React, { useState } from 'react'; // Added explicit React import
+import { Stage, Layer, Rect, Text, Line } from 'react-konva';
+import { KonvaEventObject } from 'konva/lib/Node';
 
 type Task = {
   id: number;
@@ -22,6 +13,7 @@ type Task = {
   assigned_to: string;
   dependencies: number[];
   milestone_id?: number;
+  contractor_id?: number;
 };
 
 type Milestone = {
@@ -32,23 +24,27 @@ type Milestone = {
   linked_tasks: number[];
 };
 
-export default function GanttChart({
-  tasks,
-  milestones,
-  onUpdateTaskDates,
-  onUpdateDependencies,
-}: {
+type GanttChartProps = {
   tasks: Task[];
   milestones: Milestone[];
   onUpdateTaskDates: (taskId: number, startDate: string, endDate: string) => void;
   onUpdateDependencies: (taskId: number, dependencies: number[]) => void;
-}) {
+};
+
+const GanttChart: React.FC<GanttChartProps> = ({
+  tasks,
+  milestones,
+  onUpdateTaskDates,
+  onUpdateDependencies,
+}) => {
   const [draggingTask, setDraggingTask] = useState<number | null>(null);
   const [linkingTask, setLinkingTask] = useState<number | null>(null);
   const [linkStartX, setLinkStartX] = useState<number | null>(null);
   const [linkStartY, setLinkStartY] = useState<number | null>(null);
   const [linkEndX, setLinkEndX] = useState<number | null>(null);
   const [linkEndY, setLinkEndY] = useState<number | null>(null);
+  const [hoveredTask, setHoveredTask] = useState<number | null>(null);
+  const [dragStartX, setDragStartX] = useState<number | null>(null); // Track initial X position for drag
 
   const earliestDate = tasks.reduce((earliest, task) => {
     const start = new Date(task.start_date);
@@ -100,6 +96,7 @@ export default function GanttChart({
 
     const forwardPass = () => {
       tasks.forEach((task) => {
+        const startOffset = (new Date(task.start_date).getTime() - earliestDate.getTime()) / (1000 * 60 * 60 * 24);
         task.dependencies.forEach((depId) => {
           const depEnd = earliestStart[depId] + taskDurations[depId];
           if (depEnd > earliestStart[task.id]) {
@@ -138,15 +135,23 @@ export default function GanttChart({
   const criticalPath = calculateCriticalPath();
 
   const handleDragStart = (taskId: number) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (task) {
+      const { x } = getTaskPosition(task);
+      setDragStartX(x + 150); // Store the initial X position (adjusted for offset)
+    }
     setDraggingTask(taskId);
   };
 
-  const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>, taskId: number) => {
-    if (draggingTask !== taskId) return;
+  const handleDragMove = (e: KonvaEventObject<DragEvent>, taskId: number) => {
+    if (draggingTask !== taskId || dragStartX === null) return;
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    const deltaDays = e.evt.deltaX / pixelsPerDay;
+    const currentX = e.target.x(); // Get the current X position of the dragged node
+    const deltaX = currentX - dragStartX; // Calculate the change in X position
+    const deltaDays = deltaX / pixelsPerDay; // Convert the pixel change to days
+
     const newStart = new Date(task.start_date);
     newStart.setDate(newStart.getDate() + Math.round(deltaDays));
     const newEnd = new Date(task.end_date);
@@ -157,6 +162,7 @@ export default function GanttChart({
 
   const handleDragEnd = () => {
     setDraggingTask(null);
+    setDragStartX(null);
   };
 
   const handleLinkStart = (taskId: number, x: number, y: number) => {
@@ -167,7 +173,7 @@ export default function GanttChart({
     setLinkEndY(y);
   };
 
-  const handleLinkMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
+  const handleLinkMove = (e: KonvaEventObject<MouseEvent>) => {
     if (!linkingTask) return;
     setLinkEndX(e.evt.layerX);
     setLinkEndY(e.evt.layerY);
@@ -197,13 +203,14 @@ export default function GanttChart({
   };
 
   return (
-    <div>
+    <div className="relative">
       <Stage width={1000} height={chartHeight} onMouseMove={handleLinkMove}>
         <Layer>
           {tasks.map((task, index) => {
             const { x, width } = getTaskPosition(task);
             const y = index * (taskHeight + taskSpacing) + 50;
             const isCritical = criticalPath.includes(task.id);
+            const isHovered = hoveredTask === task.id;
 
             return (
               <React.Fragment key={task.id}>
@@ -216,19 +223,27 @@ export default function GanttChart({
                   width={150}
                   align="right"
                   padding={5}
+                  fontStyle="bold"
                 />
                 <Rect
                   x={x + 150}
                   y={y}
                   width={width}
                   height={taskHeight}
-                  fill={isCritical ? 'red' : 'yellow'}
+                  fill={isCritical ? '#ef4444' : '#f59e0b'}
+                  opacity={isHovered ? 0.8 : 1}
+                  shadowColor="rgba(0, 0, 0, 0.3)"
+                  shadowBlur={isHovered ? 10 : 5}
+                  shadowOffsetX={0}
+                  shadowOffsetY={2}
                   draggable
                   onDragStart={() => handleDragStart(task.id)}
                   onDragMove={(e) => handleDragMove(e, task.id)}
                   onDragEnd={handleDragEnd}
                   onMouseDown={(e) => handleLinkStart(task.id, x + 150 + width, y + taskHeight / 2)}
                   onMouseUp={() => handleLinkEnd(task.id)}
+                  onMouseEnter={() => setHoveredTask(task.id)}
+                  onMouseLeave={() => setHoveredTask(null)}
                 />
                 {task.dependencies.map((depId) => {
                   const depTask = tasks.find((t) => t.id === depId);
@@ -240,8 +255,9 @@ export default function GanttChart({
                     <Line
                       key={`${task.id}-${depId}`}
                       points={[depPos.x + depPos.width + 150, depY + taskHeight / 2, x + 150, y + taskHeight / 2]}
-                      stroke="white"
+                      stroke="#ffffff"
                       strokeWidth={2}
+                      dash={[5, 5]}
                     />
                   );
                 })}
@@ -254,8 +270,8 @@ export default function GanttChart({
               <React.Fragment key={milestone.id}>
                 <Line
                   points={[x, 0, x, chartHeight]}
-                  stroke="green"
-                  strokeWidth={2}
+                  stroke="#10b981"
+                  strokeWidth={3}
                   dash={[5, 5]}
                 />
                 <Text
@@ -263,8 +279,9 @@ export default function GanttChart({
                   y={10}
                   text={milestone.name}
                   fontSize={14}
-                  fill="green"
+                  fill="#10b981"
                   rotation={90}
+                  fontStyle="bold"
                 />
               </React.Fragment>
             );
@@ -272,7 +289,7 @@ export default function GanttChart({
           {linkingTask && linkStartX && linkStartY && linkEndX && linkEndY && (
             <Line
               points={[linkStartX, linkStartY, linkEndX, linkEndY]}
-              stroke="white"
+              stroke="#ffffff"
               strokeWidth={2}
               dash={[5, 5]}
             />
@@ -281,4 +298,6 @@ export default function GanttChart({
       </Stage>
     </div>
   );
-}
+};
+
+export default GanttChart;

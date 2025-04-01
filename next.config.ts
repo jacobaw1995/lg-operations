@@ -1,12 +1,17 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  webpack: (config, { isServer }) => {
-    // Mock the 'canvas' module for server-side builds
-    if (isServer) {
-      config.resolve.alias['canvas'] = false;
+import { NextConfig } from 'next';
+
+const nextConfig: NextConfig = {
+  reactStrictMode: true,
+  webpack: (config: NextConfig, { isServer }: { isServer: boolean }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+      };
     }
     return config;
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;

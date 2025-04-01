@@ -9,7 +9,7 @@ type Project = {
   name: string;
   status: string;
   customer_id: number;
-  customer: { name: string } | null; // Update type to allow null
+  customer: { name: string };
 };
 
 type Task = {
@@ -55,7 +55,7 @@ export default function Dashboard() {
       setError('Failed to load dashboard data. Please try again.');
       console.error('Error fetching projects:', projectsError);
     } else {
-      setActiveProjects(projectsData || []);
+      setActiveProjects((projectsData as unknown as Project[]) || []);
     }
 
     // Fetch overdue tasks (deadline < today and status not 'Done')
@@ -69,7 +69,12 @@ export default function Dashboard() {
       setError('Failed to load dashboard data. Please try again.');
       console.error('Error fetching tasks:', tasksError);
     } else {
-      setOverdueTasks(tasksData || []);
+      // Map the response to ensure project is an object, not an array
+      const mappedTasks = (tasksData as unknown as any[]).map((task) => ({
+        ...task,
+        project: Array.isArray(task.project) ? task.project[0] || { name: '' } : task.project,
+      })) as Task[];
+      setOverdueTasks(mappedTasks || []);
     }
 
     // Fetch customers for sales pipeline
@@ -181,7 +186,7 @@ export default function Dashboard() {
                           {project.name}
                         </Link>
                       </td>
-                      <td>{project.customer?.name ?? 'No Customer'}</td> {/* Handle null customer */}
+                      <td>{project.customer.name}</td>
                       <td>{project.status}</td>
                     </tr>
                   ))}

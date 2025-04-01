@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react'; // Add useCallback import
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 
 type Customer = {
@@ -8,7 +8,7 @@ type Customer = {
   name: string;
   email: string;
   status: string;
-  tags: string[] | null | undefined;
+  tags: string[];
 };
 
 function Modal({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: React.ReactNode }) {
@@ -40,7 +40,7 @@ export default function CRM() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const fetchCustomers = useCallback(async () => {
+  const fetchCustomers = async () => {
     setLoading(true);
     setError('');
     let query = supabase.from('customers').select('*');
@@ -58,11 +58,11 @@ export default function CRM() {
       setCustomers(data || []);
     }
     setLoading(false);
-  }, [filterStatus, filterTags]); // Dependencies included
+  };
 
   useEffect(() => {
     fetchCustomers();
-  }, [fetchCustomers]);
+  }, [filterStatus, filterTags]);
 
   const handleAddCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -238,7 +238,7 @@ export default function CRM() {
               <input
                 type="text"
                 placeholder="Tags (comma-separated)"
-                value={editCustomer.tags?.join(', ') ?? ''}
+                value={editCustomer.tags.join(', ')}
                 onChange={(e) => setEditCustomer({ ...editCustomer, tags: e.target.value.split(',').map((tag) => tag.trim()) })}
                 className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
               />
@@ -251,7 +251,7 @@ export default function CRM() {
         )}
       </Modal>
       {loading && <p className="text-yellow-500 mb-4 animate-pulse">Loading...</p>}
-      {error && <p className="text-red-500 mb-4 }}>{error}</p>}
+      {error && <p className="text-red-500 mb-4">{error}</p>}
       <table className="table w-full">
         <thead>
           <tr>
@@ -268,7 +268,7 @@ export default function CRM() {
               <td>{customer.name}</td>
               <td>{customer.email}</td>
               <td>{customer.status}</td>
-              <td>{Array.isArray(customer.tags) ? customer.tags.join(', ') : customer.tags ?? ''}</td>
+              <td>{customer.tags.join(', ')}</td>
               <td>
                 <button
                   onClick={() => {

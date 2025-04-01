@@ -23,6 +23,7 @@ type Task = {
   assigned_to: string;
   dependencies: number[];
   milestone_id?: number;
+  contractor_id?: number; // Added contractor_id to the Task type
 };
 
 type Project = {
@@ -358,7 +359,7 @@ export default function Projects() {
     }
     setLoading(false);
   };
-
+  
   const handleEditTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editTask) return;
@@ -395,7 +396,7 @@ export default function Projects() {
             contractor_id: editTask.contractor_id,
             task_id: editTask.id,
             project_id: selectedProject,
-          }], { onConflict: ['task_id'] });
+          }], { onConflict: 'task_id' }); // Fixed: onConflict expects a string, not an array
         if (assignmentError) {
           console.error('Assignment Update Error:', assignmentError);
         }
@@ -486,7 +487,7 @@ export default function Projects() {
     setLoading(false);
   };
 
-  const handleUpdateTaskDatesλι = async (taskId: number, startDate: string, endDate: string) => {
+  const handleUpdateTaskDates = async (taskId: number, startDate: string, endDate: string) => {
     setLoading(true);
     setError('');
     const task = tasks.find((t) => t.id === taskId);
@@ -534,7 +535,7 @@ export default function Projects() {
     setError('');
     const { error } = await supabase
       .from('resource_assignments')
-      .upsert([{ resource_id: resourceId, task_id: taskId }], { onConflict: ['task_id'] });
+      .upsert([{ resource_id: resourceId, task_id: taskId }], { onConflict: 'task_id' }); // Fixed: onConflict expects a string, not an array
     if (error) {
       setError('Failed to assign resource. Please try again.');
       console.error('Assign Resource Error:', error);
@@ -967,34 +968,34 @@ export default function Projects() {
             </>
           ) : viewMode === 'gantt' ? (
             <>
-              <button onClick={exportGanttToPDF} className="btn-yellow mb-4">
+              <button onClick={exportGanttToPDF} className="btn-yellow mb-4 transition-colors duration-200">
                 Export Gantt to PDF
               </button>
               <GanttChart
                 tasks={tasks}
                 milestones={milestones}
-                onUpdateTaskDates={handleUpdateTaskDates}
+                onUpdateTaskDates={handleUpdateTaskDates} // Fixed: Correct function name
                 onUpdateDependencies={handleUpdateDependencies}
               />
               <div ref={pdfRef} style={{ position: 'absolute', left: '-9999px', top: '-9999px' }} />
             </>
           ) : (
             <>
-              <h2 className="text-xl font-bold mb-4">Activity Log</h2>
-              <table className="table">
+              <h2 className="text-xl font-bold mb-4 text-yellow-500">Activity Log</h2>
+              <table className="table w-full">
                 <thead>
                   <tr>
-                    <th>Timestamp</th>
-                    <th>Entity Type</th>
-                    <th>Entity ID</th>
-                    <th>Action</th>
-                    <th>Details</th>
-                    <th>Performed By</th>
+                    <th className="text-left">Timestamp</th>
+                    <th className="text-left">Entity Type</th>
+                    <th className="text-left">Entity ID</th>
+                    <th className="text-left">Action</th>
+                    <th className="text-left">Details</th>
+                    <th className="text-left">Performed By</th>
                   </tr>
                 </thead>
                 <tbody>
                   {activityLogs.map((log) => (
-                    <tr key={log.id}>
+                    <tr key={log.id} className="hover:bg-gray-700 transition-colors duration-200">
                       <td>{new Date(log.created_at).toLocaleString()}</td>
                       <td>{log.entity_type}</td>
                       <td>{log.entity_id}</td>
