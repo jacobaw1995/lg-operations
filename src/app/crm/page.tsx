@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 
 type Customer = {
@@ -40,7 +40,7 @@ export default function CRM() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     setLoading(true);
     setError('');
     let query = supabase.from('customers').select('*');
@@ -58,11 +58,11 @@ export default function CRM() {
       setCustomers(data || []);
     }
     setLoading(false);
-  };
+  }, [filterStatus, filterTags]); // Dependencies: filterStatus and filterTags
 
   useEffect(() => {
     fetchCustomers();
-  }, [filterStatus, filterTags, fetchCustomers]); // Added fetchCustomers here
+  }, [filterStatus, filterTags, fetchCustomers]);
 
   const handleAddCustomer = async (e: React.FormEvent) => {
     e.preventDefault();

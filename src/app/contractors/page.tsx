@@ -89,7 +89,11 @@ export default function Contractors() {
       setError('Failed to load contractor hours. Please try again.');
       console.error('Fetch Contractor Hours Error:', error);
     } else {
-      setContractorHours(data || []);
+      const mappedData = data.map((hour) => ({
+        ...hour,
+        task: Array.isArray(hour.task) ? hour.task[0] || { task: '' } : hour.task,
+      }));
+      setContractorHours(mappedData || []);
     }
     setLoading(false);
   };
