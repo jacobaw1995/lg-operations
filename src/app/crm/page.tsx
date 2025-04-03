@@ -132,6 +132,8 @@ export default function CRM() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-8">CRM</h1>
+      {loading && <p className="text-yellow-500 mb-4 animate-pulse">Loading...</p>}
+      {error && <p className="text-red-500 mb-4">{error}</p>}
       <form onSubmit={handleAddCustomer} className="mb-8 bg-gray-800 p-6 rounded-xl shadow-lg">
         <div className="grid grid-cols-4 gap-4">
           <input
@@ -268,7 +270,7 @@ export default function CRM() {
               <td>{customer.name}</td>
               <td>{customer.email}</td>
               <td>{customer.status}</td>
-              <td>{customer.tags.join(', ')}</td>
+              <td>{Array.isArray(customer.tags) ? customer.tags.join(', ') : 'No Tags'}</td>
               <td>
                 <button
                   onClick={() => {
