@@ -20,7 +20,7 @@ type VendorOrder = {
   total_cost: number;
   status: string;
   order_date: string;
-  project: { name: string };
+  project: { name: string } | null; // Allow project to be null
 };
 
 type Project = {
@@ -92,10 +92,14 @@ export default function Vendors() {
       setError('Failed to load vendor orders. Please try again.');
       console.error('Fetch Vendor Orders Error:', error);
     } else {
-      // Map the response to ensure project is an object
+      // Map the response to ensure project is an object or null
       const mappedData = data.map((order) => ({
         ...order,
-        project: Array.isArray(order.project) ? order.project[0] || { name: '' } : order.project,
+        project: order.project
+          ? Array.isArray(order.project)
+            ? order.project[0] || { name: '' }
+            : order.project
+          : null, // Handle case where project is null
       }));
       setVendorOrders(mappedData || []);
     }
@@ -464,7 +468,7 @@ export default function Vendors() {
             <tbody>
               {vendorOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-gray-700 transition-colors duration-200">
-                  <td>{order.project.name}</td>
+                  <td>{order.project?.name || 'Unknown Project'}</td>
                   <td>{order.material}</td>
                   <td>{order.quantity}</td>
                   <td>${order.total_cost}</td>
