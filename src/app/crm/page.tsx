@@ -8,7 +8,7 @@ type Customer = {
   name: string;
   email: string;
   status: string;
-  tags: string[] | null; // Updated to allow null from Supabase
+  tags: string[]; // Always an array after normalization
 };
 
 function Modal({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: React.ReactNode }) {
@@ -52,8 +52,16 @@ export default function CRM() {
       setError('Failed to load customers. Please try again.');
       console.error('Fetch Customers Error:', error.message);
     } else {
-      setCustomers(data || []);
-      console.log('Customers fetched:', data);
+      const normalizedCustomers = data.map((customer) => ({
+        ...customer,
+        tags: Array.isArray(customer.tags)
+          ? customer.tags
+          : typeof customer.tags === 'string'
+          ? customer.tags.split(',').map((tag: string) => tag.trim()) // Added type annotation for 'tag'
+          : [],
+      }));
+      setCustomers(normalizedCustomers);
+      console.log('Customers fetched:', normalizedCustomers);
     }
     setLoading(false);
   }, [filterStatus, filterTags]);
@@ -99,7 +107,7 @@ export default function CRM() {
     console.log('Updating customer:', editCustomer);
     const { data, error } = await supabase
       .from('customers')
-      .update({ ...editCustomer, tags: editCustomer.tags || [] }) // Ensure tags is an array
+      .update(editCustomer)
       .eq('id', editCustomer.id)
       .select();
     if (error) {
@@ -246,7 +254,7 @@ export default function CRM() {
               <input
                 type="text"
                 placeholder="Tags (comma-separated)"
-                value={(editCustomer.tags || []).join(', ')} // Default to empty array if tags is null
+                value={editCustomer.tags.join(', ')}
                 onChange={(e) => setEditCustomer({ ...editCustomer, tags: e.target.value.split(',').map((tag) => tag.trim()) })}
                 className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
               />
@@ -274,12 +282,12 @@ export default function CRM() {
               <td>{customer.name}</td>
               <td>{customer.email}</td>
               <td>{customer.status}</td>
-              <td>{Array.isArray(customer.tags) ? customer.tags.join(', ') : 'No Tags'}</td>
+              <td>{customer.tags.join(', ') || 'No Tags'}</td>
               <td>
                 <button
                   onClick={() => {
                     console.log('Editing customer:', customer);
-                    setEditCustomer({ ...customer, tags: customer.tags || [] }); // Ensure tags is an array
+                    setEditCustomer(customer);
                     setIsModalOpen(true);
                   }}
                   className="btn-yellow mr-2"
