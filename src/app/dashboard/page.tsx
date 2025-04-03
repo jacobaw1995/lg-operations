@@ -119,7 +119,7 @@ export default function Dashboard() {
         pipeline[customer.status].push(customer);
       });
       setSalesPipeline(pipeline);
-    } catch (err: unknown) { // Changed 'Error' to 'unknown'
+    } catch (err: unknown) {
       console.error('Dashboard fetch failed:', err instanceof Error ? err.message : String(err));
       setError('Failed to load dashboard data. Please try again.');
     } finally {
@@ -151,7 +151,11 @@ export default function Dashboard() {
                   <h3 className="text-lg font-semibold mb-2 text-white">{status} ({salesPipeline[status].length})</h3>
                   <ul className="list-disc pl-5 space-y-1">
                     {salesPipeline[status].slice(0, 3).map((customer) => (
-                      <li key={customer.id} className="text-sm text-gray-300">{customer.name}</li>
+                      <li key={customer.id} className="text-sm text-gray-300">
+                        <Link href={`/crm?search=${customer.name}`} className="text-yellow-500 hover:underline">
+                          {customer.name}
+                        </Link>
+                      </li>
                     ))}
                     {salesPipeline[status].length > 3 && (
                       <li className="text-sm text-gray-400">+{salesPipeline[status].length - 3} more</li>
@@ -196,7 +200,7 @@ export default function Dashboard() {
           </div>
 
           {/* Active Projects */}
-          <div className="bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
+          <div className="bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-200">
             <h2 className="text-xl font-bold mb-4 text-yellow-500">Active Projects ({activeProjects.length})</h2>
             {activeProjects.length > 0 ? (
               <table className="table w-full">

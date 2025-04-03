@@ -585,24 +585,33 @@ export default function Projects() {
   const exportGanttToPDF = async () => {
     const element = pdfRef.current;
     if (!element) return;
-
+  
+    // Ensure the logo exists or use a placeholder
+    const logoUrl = '/logo.png'; // Replace with actual logo path if available
+    const logoExists = await fetch(logoUrl).then(res => res.ok).catch(() => false);
+    const logoSrc = logoExists ? logoUrl : 'https://via.placeholder.com/200x50?text=LG+Asphalt';
+  
+    // Set up the PDF content with proper styling
     element.innerHTML = `
       <div style="padding: 30px; background: #1f2937; color: white; font-family: 'Montserrat', sans-serif;">
-        <img src="/logo.png" alt="LG Asphalt Logo" style="width: 200px; margin-bottom: 20px;" />
-        <h1 style="font-size: 24px; font-weight: bold; margin-bottom: 15px;">LG Asphalt Gantt Chart</h1>
-        <div id="gantt-chart"></div>
+        <img src="${logoSrc}" alt="LG Asphalt Logo" style="width: 200px; margin-bottom: 20px;" />
+        <h1 style="font-size: 24px; font-weight: bold; margin-bottom: 15px; text-align: center;">LG Asphalt Gantt Chart</h1>
+        <div id="gantt-chart" style="background: #1f2937;"></div>
       </div>
     `;
-
-    const ganttElement = document.createElement('div');
-    ganttElement.id = 'gantt-chart';
-    element.querySelector('#gantt-chart')!.appendChild(ganttElement);
-
-    const canvas = await html2canvas(ganttElement, { scale: 2 });
+  
+    const ganttElement = kanbanRef.current; // Use the Kanban view for rendering
+    if (!ganttElement) return;
+  
+    const canvas = await html2canvas(ganttElement, { scale: 2, backgroundColor: '#1f2937' });
     const imgData = canvas.toDataURL('image/png');
-    const doc = new jsPDF('p', 'mm', 'a4');
-    const imgWidth = 190;
+    const doc = new jsPDF('landscape', 'mm', 'a4'); // Use landscape for better Gantt chart fit
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const imgWidth = pageWidth - 20; // 10mm margin on each side
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  
+    // Add the image with proper margins
     doc.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
     doc.save('gantt_chart.pdf');
   };
