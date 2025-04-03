@@ -329,7 +329,7 @@ export default function Projects() {
     }
     setLoading(true);
     // Exclude contractor_id from taskData since it's not in the tasks table
-    const { contractor_id, ...taskDataWithoutContractor } = newTask;
+    const { contractor_id: _, ...taskDataWithoutContractor } = newTask; // Use _ to indicate unused variable
     const taskData = { ...taskDataWithoutContractor, project_id: selectedProject, dependencies: newTask.dependencies || [] };
     const { data, error } = await supabase.from('tasks').insert([taskData]).select();
     if (error) {
