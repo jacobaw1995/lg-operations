@@ -8,7 +8,7 @@ type Customer = {
   name: string;
   email: string;
   status: string;
-  tags: string[];
+  tags: string[] | null; // Updated to allow null from Supabase
 };
 
 function Modal({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: React.ReactNode }) {
@@ -99,7 +99,7 @@ export default function CRM() {
     console.log('Updating customer:', editCustomer);
     const { data, error } = await supabase
       .from('customers')
-      .update(editCustomer)
+      .update({ ...editCustomer, tags: editCustomer.tags || [] }) // Ensure tags is an array
       .eq('id', editCustomer.id)
       .select();
     if (error) {
@@ -246,7 +246,7 @@ export default function CRM() {
               <input
                 type="text"
                 placeholder="Tags (comma-separated)"
-                value={editCustomer.tags.join(', ')}
+                value={(editCustomer.tags || []).join(', ')} // Default to empty array if tags is null
                 onChange={(e) => setEditCustomer({ ...editCustomer, tags: e.target.value.split(',').map((tag) => tag.trim()) })}
                 className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
               />
@@ -279,7 +279,7 @@ export default function CRM() {
                 <button
                   onClick={() => {
                     console.log('Editing customer:', customer);
-                    setEditCustomer(customer);
+                    setEditCustomer({ ...customer, tags: customer.tags || [] }); // Ensure tags is an array
                     setIsModalOpen(true);
                   }}
                   className="btn-yellow mr-2"
