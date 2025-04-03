@@ -119,8 +119,8 @@ export default function Dashboard() {
         pipeline[customer.status].push(customer);
       });
       setSalesPipeline(pipeline);
-    } catch (err: Error) { // Changed 'any' to 'Error'
-      console.error('Dashboard fetch failed:', err.message);
+    } catch (err: unknown) { // Changed 'Error' to 'unknown'
+      console.error('Dashboard fetch failed:', err instanceof Error ? err.message : String(err));
       setError('Failed to load dashboard data. Please try again.');
     } finally {
       setLoading(false);
