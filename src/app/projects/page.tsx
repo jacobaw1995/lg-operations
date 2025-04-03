@@ -23,7 +23,7 @@ type Task = {
   assigned_to: string;
   dependencies: number[];
   milestone_id?: number;
-  contractor_id?: number; // Added contractor_id to the Task type
+  contractor_id?: number;
 };
 
 type Project = {
@@ -328,7 +328,9 @@ export default function Projects() {
       return;
     }
     setLoading(true);
-    const taskData = { ...newTask, project_id: selectedProject, dependencies: newTask.dependencies || [] };
+    // Exclude contractor_id from taskData since it's not in the tasks table
+    const { contractor_id, ...taskDataWithoutContractor } = newTask;
+    const taskData = { ...taskDataWithoutContractor, project_id: selectedProject, dependencies: newTask.dependencies || [] };
     const { data, error } = await supabase.from('tasks').insert([taskData]).select();
     if (error) {
       setError('Failed to add task. Please try again.');
@@ -396,7 +398,7 @@ export default function Projects() {
             contractor_id: editTask.contractor_id,
             task_id: editTask.id,
             project_id: selectedProject,
-          }], { onConflict: 'task_id' }); // Fixed: onConflict expects a string, not an array
+          }], { onConflict: 'task_id' });
         if (assignmentError) {
           console.error('Assignment Update Error:', assignmentError);
         }
@@ -535,7 +537,7 @@ export default function Projects() {
     setError('');
     const { error } = await supabase
       .from('resource_assignments')
-      .upsert([{ resource_id: resourceId, task_id: taskId }], { onConflict: 'task_id' }); // Fixed: onConflict expects a string, not an array
+      .upsert([{ resource_id: resourceId, task_id: taskId }], { onConflict: 'task_id' });
     if (error) {
       setError('Failed to assign resource. Please try again.');
       console.error('Assign Resource Error:', error);
@@ -709,7 +711,7 @@ export default function Projects() {
               <div className="bg-gray-800 p-6 rounded-lg shadow-lg w-1/2">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-bold">Add Milestone</h2>
-                  <button onClick={() => setIsMilestoneModalOpen(false)} className="text-red-500 hover:text-red-700">
+                  <button onClick={() => setIsMilestoneModalOpen(false)} className="text-Red-500 hover:text-red-700">
                     Close
                   </button>
                 </div>
