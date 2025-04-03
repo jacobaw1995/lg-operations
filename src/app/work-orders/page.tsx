@@ -89,24 +89,27 @@ export default function WorkOrders() {
     setLoading(false);
   };
 
-  const handleUpdateStatus = async (workOrderId: number, newStatus: string) => {
+  const handleUpdateStatus = async (workOrderId: number, newStatus: string, newAssignedTo?: string) => {
     setLoading(true);
     setError('');
+    const updateData: { status?: string; assigned_to?: string } = {};
+    if (newStatus) updateData.status = newStatus;
+    if (newAssignedTo) updateData.assigned_to = newAssignedTo;
     const { data, error } = await supabase
       .from('work_orders')
-      .update({ status: newStatus })
+      .update(updateData)
       .eq('id', workOrderId)
       .select();
     if (error) {
-      setError('Failed to update work order status. Please try again.');
-      console.error('Update Work Order Status Error:', error.message);
+      setError('Failed to update work order. Please try again.');
+      console.error('Update Work Order Error:', error.message);
     } else {
       console.log('Work Order Updated:', data);
       fetchWorkOrders();
     }
     setLoading(false);
   };
-
+  
   return (
     <div>
       <h1 className="text-3xl font-bold mb-8">Work Orders</h1>
@@ -182,7 +185,7 @@ export default function WorkOrders() {
               <td>
                 <select
                   value={workOrder.assigned_to}
-                  onChange={(e) => handleUpdateStatus(workOrder.id, workOrder.status)}
+                  onChange={(e) => handleUpdateStatus(workOrder.id, workOrder.status, e.target.value)}
                   className="p-1 rounded bg-gray-700 text-white"
                 >
                   {teamMembers.map((member) => (
@@ -195,7 +198,7 @@ export default function WorkOrders() {
               <td>
                 <select
                   value={workOrder.status}
-                  onChange={(e) => handleUpdateStatus(workOrder.id, e.target.value)}
+                  onChange={(e) => handleUpdateStatus(workOrder.id, e.target.value, workOrder.assigned_to)}
                   className="p-1 rounded bg-gray-700 text-white"
                 >
                   <option value="Pending">Pending</option>
@@ -206,7 +209,7 @@ export default function WorkOrders() {
               <td>{new Date(workOrder.created_at).toLocaleDateString()}</td>
               <td>
                 <button
-                  onClick={() => handleUpdateStatus(workOrder.id, workOrder.status)}
+                  onClick={() => handleUpdateStatus(workOrder.id, workOrder.status, workOrder.assigned_to)}
                   className="btn-yellow"
                   disabled={loading}
                 >

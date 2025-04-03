@@ -607,7 +607,6 @@ export default function Projects() {
     const imgData = canvas.toDataURL('image/png');
     const doc = new jsPDF('landscape', 'mm', 'a4'); // Use landscape for better Gantt chart fit
     const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
     const imgWidth = pageWidth - 20; // 10mm margin on each side
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
   
