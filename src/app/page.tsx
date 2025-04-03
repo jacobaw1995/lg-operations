@@ -12,7 +12,7 @@ export default function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Login attempted"); // Generic log for debugging
+    console.log("Login attempted");
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -31,9 +31,9 @@ export default function Login() {
   };
 
   return (
-    <div className="flex items-center justify-center h-screen">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-lg">
-        <h1 className="text-2xl font-bold mb-4">Login to LG Operations</h1>
+    <div className="min-h-screen flex items-center justify-center bg-black">
+      <div className="bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md">
+        <h1 className="text-2xl font-bold mb-4 text-center">Login to LG Operations</h1>
         <form onSubmit={handleLogin}>
           <div className="mb-4">
             <label className="block mb-2">Email</label>
