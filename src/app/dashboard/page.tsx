@@ -62,6 +62,11 @@ export default function Dashboard() {
   const [error, setError] = useState('');
 
   const fetchDashboardData = async () => {
+    const { data: session } = await supabase.auth.getSession();
+    if (!session?.session) {
+      setError('Please log in to view the dashboard.');
+      return;
+    }
     setLoading(true);
     setError('');
 
@@ -131,8 +136,8 @@ export default function Dashboard() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
-      {loading && <p className="text-yellow-500 mb-4 animate-pulse">Fetching data...</p>}
-      {error && <p className="text-red-500 mb-4">{error}</p>}
+      if (loading) return <p className="text-yellow-500">Fetching data...</p>;
+      if (error) return <p className="text-red-500">{error}</p>;
       {!loading && !error && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Sales Pipeline */}
@@ -208,7 +213,7 @@ export default function Dashboard() {
                           {project.name}
                         </Link>
                       </td>
-                      <td>{project.customer.name}</td>
+                      <td>{project.customer?.name || 'Unknown Customer'}</td>
                       <td>{project.status}</td>
                     </tr>
                   ))}
