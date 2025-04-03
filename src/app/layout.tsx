@@ -1,6 +1,5 @@
 import './globals.css';
-import ErrorBoundary from '../components/ErrorBoundary';
-import ClientLayout from './ClientLayout'; // Should resolve to src/app/ClientLayout.tsx
+import ClientLayout from './ClientLayout';
 
 export const metadata = {
   title: 'LG Operations',
