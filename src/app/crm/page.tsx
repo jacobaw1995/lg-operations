@@ -43,26 +43,24 @@ export default function CRM() {
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
     setError('');
+    console.log('Fetching customers with filters:', { filterStatus, filterTags });
     let query = supabase.from('customers').select('*');
-    if (filterStatus) {
-      query = query.eq('status', filterStatus);
-    }
-    if (filterTags.length > 0) {
-      query = query.contains('tags', filterTags);
-    }
+    if (filterStatus) query = query.eq('status', filterStatus);
+    if (filterTags.length > 0) query = query.contains('tags', filterTags);
     const { data, error } = await query;
     if (error) {
       setError('Failed to load customers. Please try again.');
-      console.error('Fetch Customers Error:', error);
+      console.error('Fetch Customers Error:', error.message);
     } else {
       setCustomers(data || []);
+      console.log('Customers fetched:', data);
     }
     setLoading(false);
-  }, [filterStatus, filterTags]); // Dependencies: filterStatus and filterTags
+  }, [filterStatus, filterTags]);
 
   useEffect(() => {
     fetchCustomers();
-  }, [filterStatus, filterTags, fetchCustomers]);
+  }, [fetchCustomers]);
 
   const handleAddCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,10 +70,11 @@ export default function CRM() {
       return;
     }
     setLoading(true);
+    console.log('Adding customer:', newCustomer);
     const { data, error } = await supabase.from('customers').insert([newCustomer]).select();
     if (error) {
       setError('Failed to add customer. Please try again.');
-      console.error('Customer Insert Error:', error);
+      console.error('Customer Insert Error:', error.message);
     } else {
       console.log('Customer Added:', data);
       setNewCustomer({ name: '', email: '', status: 'Lead', tags: [] });
@@ -86,13 +85,18 @@ export default function CRM() {
 
   const handleEditCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editCustomer) return;
+    if (!editCustomer) {
+      console.warn('No customer to edit');
+      return;
+    }
     setError('');
     if (!editCustomer.name || !editCustomer.email) {
       setError('Name and email are required.');
+      console.warn('Edit validation failed:', editCustomer);
       return;
     }
     setLoading(true);
+    console.log('Updating customer:', editCustomer);
     const { data, error } = await supabase
       .from('customers')
       .update(editCustomer)
@@ -100,7 +104,7 @@ export default function CRM() {
       .select();
     if (error) {
       setError('Failed to update customer. Please try again.');
-      console.error('Customer Update Error:', error);
+      console.error('Customer Update Error:', error.message);
     } else {
       console.log('Customer Updated:', data);
       setEditCustomer(null);
@@ -113,11 +117,13 @@ export default function CRM() {
   const handleDeleteCustomer = async (customerId: number) => {
     setError('');
     setLoading(true);
+    console.log('Deleting customer ID:', customerId);
     const { error } = await supabase.from('customers').delete().eq('id', customerId);
     if (error) {
       setError('Failed to delete customer. Please try again.');
-      console.error('Customer Delete Error:', error);
+      console.error('Customer Delete Error:', error.message);
     } else {
+      console.log('Customer Deleted:', customerId);
       fetchCustomers();
     }
     setLoading(false);
@@ -252,8 +258,6 @@ export default function CRM() {
           </form>
         )}
       </Modal>
-      {loading && <p className="text-yellow-500 mb-4 animate-pulse">Loading...</p>}
-      {error && <p className="text-red-500 mb-4">{error}</p>}
       <table className="table w-full">
         <thead>
           <tr>
@@ -274,6 +278,7 @@ export default function CRM() {
               <td>
                 <button
                   onClick={() => {
+                    console.log('Editing customer:', customer);
                     setEditCustomer(customer);
                     setIsModalOpen(true);
                   }}
