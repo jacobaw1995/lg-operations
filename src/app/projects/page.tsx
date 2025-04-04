@@ -12,7 +12,7 @@ import html2canvas from 'html2canvas';
 
 const GanttChart = dynamic(() => import('../../components/GanttChart'), { ssr: false });
 
-type Task = {
+export type Task = {
   id: number;
   project_id: number;
   task: string;
@@ -26,28 +26,28 @@ type Task = {
   contractor_id?: number;
 };
 
-type Project = {
+export type Project = {
   id: number;
   name: string;
 };
 
-type Contractor = {
+export type Contractor = {
   id: number;
   name: string;
 };
 
-type Vendor = {
+export type Vendor = {
   id: number;
   name: string;
 };
 
-type Resource = {
+export type Resource = {
   id: number;
   name: string;
   type: string;
 };
 
-type Milestone = {
+export type Milestone = {
   id: number;
   project_id: number;
   name: string;
@@ -55,7 +55,7 @@ type Milestone = {
   linked_tasks: number[];
 };
 
-type ActivityLog = {
+export type ActivityLog = {
   id: number;
   project_id: number;
   entity_type: string;

@@ -21,6 +21,7 @@
     "react": "^19.0.0",
     "react-big-calendar": "^1.18.0",
     "react-dom": "^19.0.0",
+    "react-google-charts": "^5.2.1",
     "react-konva": "^19.0.3",
     "tailwindcss": "^3.4.14"
   },
