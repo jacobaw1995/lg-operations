@@ -114,7 +114,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones }) => {
     controlWrapper?: GoogleChartControl;
     props: ReactGoogleChartProps;
     google: GoogleViz;
-    eventArgs: {};
+    eventArgs: unknown;
   }) => void }[] = [
     {
       eventName: 'select',
