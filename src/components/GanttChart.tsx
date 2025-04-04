@@ -1,29 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Chart, GoogleVizEventName } from 'react-google-charts';
+import { Chart, GoogleVizEventName, GoogleChartWrapper, GoogleChartControl, GoogleViz, ReactGoogleChartProps } from 'react-google-charts';
 import { Task, Milestone } from '../app/projects/page';
 
-// Define a type for the Gantt chart data that matches react-google-charts expectations
 type GanttChartData = [
-  Array<{ type: string; label: string }>, // Header row
-  ...Array<Array<string | number | Date | null>> // Data rows
+  Array<{ type: string; label: string }>,
+  ...Array<Array<string | number | Date | null>>
 ];
 
 interface GanttChartProps {
   tasks: Task[];
   milestones: Milestone[];
-  onUpdateTaskDates: (taskId: number, startDate: string, endDate: string) => void;
-  onUpdateDependencies: (taskId: number, dependencies: number[]) => void;
 }
 
-const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones, onUpdateTaskDates, onUpdateDependencies }) => {
+const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones }) => {
   const [zoomLevel, setZoomLevel] = useState<'Days' | 'Weeks' | 'Months'>('Weeks');
   const [showDependencies, setShowDependencies] = useState(true);
   const [showCriticalPath, setShowCriticalPath] = useState(false);
   const [baseline, setBaseline] = useState<{ [key: number]: { start: string; end: string } }>({});
 
-  // Calculate critical path
   const calculateCriticalPath = () => {
     const taskMap = new Map<number, Task>();
     tasks.forEach((task) => taskMap.set(task.id, task));
@@ -33,7 +29,6 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones, onUpdateTask
     const latestStart = new Map<number, Date>();
     const latestFinish = new Map<number, Date>();
 
-    // Forward pass: Calculate earliest start and finish
     tasks.forEach((task) => {
       const start = new Date(task.start_date);
       const end = new Date(task.end_date);
@@ -52,7 +47,6 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones, onUpdateTask
       earliestFinish.set(task.id, new Date(earliestTaskStart.getTime() + duration * 24 * 60 * 60 * 1000));
     });
 
-    // Backward pass: Calculate latest start and finish
     const maxFinish = Math.max(...Array.from(earliestFinish.values()).map((d) => d.getTime()));
     tasks.forEach((task) => {
       const end = earliestFinish.get(task.id)!;
@@ -61,7 +55,6 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones, onUpdateTask
       const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
       latestStart.set(task.id, new Date(latestFinish.get(task.id)!.getTime() - duration * 24 * 60 * 60 * 1000));
 
-      // Adjust latest start/finish based on dependent tasks
       tasks.forEach((otherTask) => {
         if (otherTask.dependencies?.includes(task.id)) {
           const otherLatestStart = latestStart.get(otherTask.id)!;
@@ -76,12 +69,11 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones, onUpdateTask
       });
     });
 
-    // Identify critical path (tasks with no slack)
     const criticalPath = new Set<number>();
     tasks.forEach((task) => {
       const es = earliestStart.get(task.id)!.getTime();
       const ls = latestStart.get(task.id)!.getTime();
-      if (Math.abs(es - ls) < 1000 * 60 * 60 * 24) { // Less than a day of slack
+      if (Math.abs(es - ls) < 1000 * 60 * 60 * 24) {
         criticalPath.add(task.id);
       }
     });
@@ -89,7 +81,6 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones, onUpdateTask
     return criticalPath;
   };
 
-  // Set baseline on initial load
   useEffect(() => {
     const initialBaseline: { [key: number]: { start: string; end: string } } = {};
     tasks.forEach((task) => {
@@ -98,7 +89,6 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones, onUpdateTask
     setBaseline(initialBaseline);
   }, [tasks]);
 
-  // Prepare data for the Gantt chart
   const chartData: GanttChartData = [
     [
       { type: 'string', label: 'Task ID' },
@@ -114,19 +104,12 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones, onUpdateTask
 
   const criticalPath = showCriticalPath ? calculateCriticalPath() : new Set<number>();
 
-  // Add tasks to chart data
   tasks.forEach((task) => {
     const startDate = new Date(task.start_date);
     const endDate = new Date(task.end_date);
     const duration = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
     const percentComplete = task.status === 'Done' ? 100 : task.status === 'In Progress' ? 50 : 0;
     const dependencies = task.dependencies?.map((depId: number) => depId.toString()).join(',') || null;
-
-    // Determine color based on status and baseline
-    const isDelayed = new Date(task.start_date) > new Date(baseline[task.id]?.start) ||
-                     new Date(task.end_date) > new Date(baseline[task.id]?.end);
-    const isCritical = criticalPath.has(task.id);
-    const color = isCritical ? '#FF0000' : isDelayed ? '#FF5555' : '#55FF55';
 
     chartData.push([
       task.id.toString(),
@@ -140,7 +123,6 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones, onUpdateTask
     ]);
   });
 
-  // Add milestones to chart data
   milestones.forEach((milestone) => {
     const date = new Date(milestone.date);
     chartData.push([
@@ -163,9 +145,9 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones, onUpdateTask
       barCornerRadius: 5,
       palette: [
         {
-          color: '#55FF55', // Green for on-track tasks
-          dark: '#FF5555',  // Red for delayed tasks
-          light: '#FF0000', // Red for critical path
+          color: '#55FF55',
+          dark: '#FF5555',
+          light: '#FF0000',
         },
       ],
       criticalPathEnabled: showCriticalPath,
@@ -175,17 +157,17 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones, onUpdateTask
       },
       arrow: {
         show: showDependencies,
-        color: '#FFFF00', // Yellow arrows for dependencies
+        color: '#FFFF00',
       },
       labelStyle: {
         fontName: 'Montserrat',
         fontSize: 12,
         color: '#FFFFFF',
       },
-      innerGridTrack: { fill: '#1F2937' }, // Dark background
-      innerGridDarkTrack: { fill: '#374151' }, // Slightly lighter for alternating rows
+      innerGridTrack: { fill: '#1F2937' },
+      innerGridDarkTrack: { fill: '#374151' },
     },
-    backgroundColor: '#1F2937', // Match app's dark theme
+    backgroundColor: '#1F2937',
     hAxis: {
       format: zoomLevel === 'Days' ? 'MMM d' : zoomLevel === 'Weeks' ? 'MMM d' : 'MMM yyyy',
       textStyle: { color: '#FFFFFF' },
@@ -195,16 +177,22 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones, onUpdateTask
     },
   };
 
-  const handleChartEvents: { eventName: GoogleVizEventName; callback: (props: any) => void }[] = [
+  const handleChartEvents: { eventName: GoogleVizEventName; callback: (eventCallbackArgs: {
+    chartWrapper: GoogleChartWrapper | null;
+    controlWrapper?: GoogleChartControl;
+    props: ReactGoogleChartProps;
+    google: GoogleViz;
+    eventArgs: any;
+  }) => void }[] = [
     {
       eventName: 'select',
       callback: ({ chartWrapper }) => {
+        if (!chartWrapper) return;
         const selection = chartWrapper.getChart().getSelection();
         if (selection.length > 0 && selection[0]) {
           const row = selection[0].row;
           const taskId = chartData[row + 1][0] as string;
           if (!taskId.startsWith('milestone-')) {
-            // Handle task selection (e.g., open a modal for editing)
             console.log('Selected task:', taskId);
           }
         }
@@ -213,7 +201,6 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones, onUpdateTask
     {
       eventName: 'ready',
       callback: () => {
-        // Log when the chart is ready
         console.log('Gantt chart is ready');
       },
     },

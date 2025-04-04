@@ -492,49 +492,7 @@ export default function Projects() {
     }
     setLoading(false);
   };
-
-  const handleUpdateTaskDates = async (taskId: number, startDate: string, endDate: string) => {
-    setLoading(true);
-    setError('');
-    const task = tasks.find((t) => t.id === taskId);
-    const { error } = await supabase
-      .from('tasks')
-      .update({ start_date: startDate, end_date: endDate })
-      .eq('id', taskId);
-    if (error) {
-      setError('Failed to update task dates. Please try again.');
-      console.error('Update Task Dates Error:', error);
-    } else {
-      await logActivity('Task', taskId, 'Updated', {
-        old: { start_date: task?.start_date, end_date: task?.end_date },
-        new: { start_date: startDate, end_date: endDate },
-      });
-      fetchTasks();
-    }
-    setLoading(false);
-  };
-
-  const handleUpdateDependencies = async (taskId: number, dependencies: number[]) => {
-    setLoading(true);
-    setError('');
-    const task = tasks.find((t) => t.id === taskId);
-    const { error } = await supabase
-      .from('tasks')
-      .update({ dependencies })
-      .eq('id', taskId);
-    if (error) {
-      setError('Failed to update task dependencies. Please try again.');
-      console.error('Update Task Dependencies Error:', error);
-    } else {
-      await logActivity('Task', taskId, 'Updated', {
-        old: { dependencies: task?.dependencies },
-        new: { dependencies },
-      });
-      fetchTasks();
-    }
-    setLoading(false);
-  };
-
+  
   const handleAssignResource = async (taskId: number, resourceId: number) => {
     if (resourceId === 0) return;
     setLoading(true);

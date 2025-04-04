@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 
 type WorkOrder = {
@@ -35,7 +35,7 @@ export default function WorkOrders() {
 
   const teamMembers = ['Jacob Walker', 'John Doe', 'Jane Smith']; // Dropdown of 3 users
 
-  const fetchWorkOrders = async () => {
+  const fetchWorkOrders = useCallback(async () => {
     setLoading(true);
     setError('');
     let query = supabase
@@ -50,7 +50,7 @@ export default function WorkOrders() {
       setWorkOrders(data || []);
     }
     setLoading(false);
-  };
+  }, [filterStatus, supabase]);
 
   const fetchEstimates = async () => {
     const { data, error } = await supabase
@@ -65,7 +65,7 @@ export default function WorkOrders() {
 
   useEffect(() => {
     fetchWorkOrders();
-    fetchEstimates();
+    fetchEstimates(); // Assuming this is also called here
   }, [filterStatus, fetchWorkOrders]);
 
   const handleGenerateWorkOrder = async (estimate: Estimate) => {
