@@ -5,10 +5,10 @@ import { Chart, GoogleVizEventName } from 'react-google-charts';
 import { Task, Milestone } from '../app/projects/page';
 
 // Define a type for the Gantt chart data that matches react-google-charts expectations
-type GanttChartData = Array<
-  | { type: string; label: string } // Header row
-  | (string | number | Date | null) // Data rows
->;
+type GanttChartData = [
+  Array<{ type: string; label: string }>, // Header row
+  ...Array<Array<string | number | Date | null>> // Data rows
+];
 
 interface GanttChartProps {
   tasks: Task[];
@@ -47,7 +47,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones, onUpdateTask
         }
       });
 
-      earliestStart.set(task.id W, earliestTaskStart);
+      earliestStart.set(task.id, earliestTaskStart);
       const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
       earliestFinish.set(task.id, new Date(earliestTaskStart.getTime() + duration * 24 * 60 * 60 * 1000));
     });
@@ -200,7 +200,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones, onUpdateTask
       eventName: 'select',
       callback: ({ chartWrapper }) => {
         const selection = chartWrapper.getChart().getSelection();
-        if (selection.length > 0) {
+        if (selection.length > 0 && selection[0]) {
           const row = selection[0].row;
           const taskId = chartData[row + 1][0] as string;
           if (!taskId.startsWith('milestone-')) {
