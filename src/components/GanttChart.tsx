@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Chart, GoogleVizEventName, GoogleChartWrapper, GoogleChartControl, GoogleViz, ReactGoogleChartProps } from 'react-google-charts';
 import { Task, Milestone } from '../app/projects/page';
 
+// Define a type for the Gantt chart data that matches react-google-charts expectations
 type GanttChartData = [
-  Array<{ type: string; label: string }>,
-  ...Array<Array<string | number | Date | null>>
+  Array<{ type: string; label: string }>, // Header row
+  ...Array<Array<string | number | Date | null>> // Data rows
 ];
 
 interface GanttChartProps {
@@ -18,77 +19,8 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones }) => {
   const [zoomLevel, setZoomLevel] = useState<'Days' | 'Weeks' | 'Months'>('Weeks');
   const [showDependencies, setShowDependencies] = useState(true);
   const [showCriticalPath, setShowCriticalPath] = useState(false);
-  const [baseline, setBaseline] = useState<{ [key: number]: { start: string; end: string } }>({});
 
-  const calculateCriticalPath = () => {
-    const taskMap = new Map<number, Task>();
-    tasks.forEach((task) => taskMap.set(task.id, task));
-
-    const earliestStart = new Map<number, Date>();
-    const earliestFinish = new Map<number, Date>();
-    const latestStart = new Map<number, Date>();
-    const latestFinish = new Map<number, Date>();
-
-    tasks.forEach((task) => {
-      const start = new Date(task.start_date);
-      const end = new Date(task.end_date);
-      const dependencies = task.dependencies || [];
-
-      let earliestTaskStart = start;
-      dependencies.forEach((depId: number) => {
-        const depFinish = earliestFinish.get(depId);
-        if (depFinish && depFinish > earliestTaskStart) {
-          earliestTaskStart = depFinish;
-        }
-      });
-
-      earliestStart.set(task.id, earliestTaskStart);
-      const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
-      earliestFinish.set(task.id, new Date(earliestTaskStart.getTime() + duration * 24 * 60 * 60 * 1000));
-    });
-
-    const maxFinish = Math.max(...Array.from(earliestFinish.values()).map((d) => d.getTime()));
-    tasks.forEach((task) => {
-      const end = earliestFinish.get(task.id)!;
-      latestFinish.set(task.id, new Date(maxFinish));
-      const start = earliestStart.get(task.id)!;
-      const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
-      latestStart.set(task.id, new Date(latestFinish.get(task.id)!.getTime() - duration * 24 * 60 * 60 * 1000));
-
-      tasks.forEach((otherTask) => {
-        if (otherTask.dependencies?.includes(task.id)) {
-          const otherLatestStart = latestStart.get(otherTask.id)!;
-          const otherStart = earliestStart.get(otherTask.id)!;
-          const otherDuration = (earliestFinish.get(otherTask.id)!.getTime() - otherStart.getTime()) / (1000 * 60 * 60 * 24);
-          const newLatestFinish = new Date(otherLatestStart.getTime() - otherDuration * 24 * 60 * 60 * 1000);
-          if (newLatestFinish < latestFinish.get(task.id)!) {
-            latestFinish.set(task.id, newLatestFinish);
-            latestStart.set(task.id, new Date(newLatestFinish.getTime() - duration * 24 * 60 * 60 * 1000));
-          }
-        }
-      });
-    });
-
-    const criticalPath = new Set<number>();
-    tasks.forEach((task) => {
-      const es = earliestStart.get(task.id)!.getTime();
-      const ls = latestStart.get(task.id)!.getTime();
-      if (Math.abs(es - ls) < 1000 * 60 * 60 * 24) {
-        criticalPath.add(task.id);
-      }
-    });
-
-    return criticalPath;
-  };
-
-  useEffect(() => {
-    const initialBaseline: { [key: number]: { start: string; end: string } } = {};
-    tasks.forEach((task) => {
-      initialBaseline[task.id] = { start: task.start_date, end: task.end_date };
-    });
-    setBaseline(initialBaseline);
-  }, [tasks]);
-
+  // Prepare data for the Gantt chart
   const chartData: GanttChartData = [
     [
       { type: 'string', label: 'Task ID' },
@@ -102,8 +34,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones }) => {
     ],
   ];
 
-  const criticalPath = showCriticalPath ? calculateCriticalPath() : new Set<number>();
-
+  // Add tasks to chart data
   tasks.forEach((task) => {
     const startDate = new Date(task.start_date);
     const endDate = new Date(task.end_date);
@@ -123,6 +54,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones }) => {
     ]);
   });
 
+  // Add milestones to chart data
   milestones.forEach((milestone) => {
     const date = new Date(milestone.date);
     chartData.push([
@@ -145,9 +77,9 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones }) => {
       barCornerRadius: 5,
       palette: [
         {
-          color: '#55FF55',
-          dark: '#FF5555',
-          light: '#FF0000',
+          color: '#55FF55', // Green for on-track tasks
+          dark: '#FF5555',  // Red for delayed tasks
+          light: '#FF0000', // Red for critical path
         },
       ],
       criticalPathEnabled: showCriticalPath,
@@ -157,17 +89,17 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones }) => {
       },
       arrow: {
         show: showDependencies,
-        color: '#FFFF00',
+        color: '#FFFF00', // Yellow arrows for dependencies
       },
       labelStyle: {
         fontName: 'Montserrat',
         fontSize: 12,
         color: '#FFFFFF',
       },
-      innerGridTrack: { fill: '#1F2937' },
-      innerGridDarkTrack: { fill: '#374151' },
+      innerGridTrack: { fill: '#1F2937' }, // Dark background
+      innerGridDarkTrack: { fill: '#374151' }, // Slightly lighter for alternating rows
     },
-    backgroundColor: '#1F2937',
+    backgroundColor: '#1F2937', // Match app's dark theme
     hAxis: {
       format: zoomLevel === 'Days' ? 'MMM d' : zoomLevel === 'Weeks' ? 'MMM d' : 'MMM yyyy',
       textStyle: { color: '#FFFFFF' },
@@ -182,7 +114,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, milestones }) => {
     controlWrapper?: GoogleChartControl;
     props: ReactGoogleChartProps;
     google: GoogleViz;
-    eventArgs: any;
+    eventArgs: {};
   }) => void }[] = [
     {
       eventName: 'select',

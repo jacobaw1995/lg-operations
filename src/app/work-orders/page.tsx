@@ -50,7 +50,7 @@ export default function WorkOrders() {
       setWorkOrders(data || []);
     }
     setLoading(false);
-  }, [filterStatus, supabase]);
+  }, [filterStatus]);
 
   const fetchEstimates = async () => {
     const { data, error } = await supabase
