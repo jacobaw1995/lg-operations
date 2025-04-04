@@ -988,8 +988,6 @@ export default function Projects() {
               <GanttChart
                 tasks={tasks}
                 milestones={milestones}
-                onUpdateTaskDates={handleUpdateTaskDates}
-                onUpdateDependencies={handleUpdateDependencies}
               />
               <div ref={pdfRef} style={{ position: 'absolute', left: '-9999px', top: '-9999px' }} />
             </>

@@ -66,7 +66,7 @@ export default function WorkOrders() {
   useEffect(() => {
     fetchWorkOrders();
     fetchEstimates();
-  }, [filterStatus]);
+  }, [filterStatus, fetchWorkOrders]);
 
   const handleGenerateWorkOrder = async (estimate: Estimate) => {
     setLoading(true);
