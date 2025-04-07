@@ -113,8 +113,8 @@ export default function WorkOrders() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-8">Work Orders</h1>
-      {loading && <p className="text-yellow-500 mb-4 animate-pulse">Loading...</p>}
-      {error && <p className="text-red-500 mb-4">{error}</p>}
+      {loading && <p className="text-yellow-500 mb-4 animate-pulse text-center">Loading...</p>}
+      {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
 
       {/* Generate Work Orders from Estimates */}
       <div className="mb-8 bg-gray-800 p-6 rounded-xl shadow-lg">

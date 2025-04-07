@@ -492,7 +492,7 @@ export default function Projects() {
     }
     setLoading(false);
   };
-  
+
   const handleAssignResource = async (taskId: number, resourceId: number) => {
     if (resourceId === 0) return;
     setLoading(true);
@@ -890,8 +890,8 @@ export default function Projects() {
                   </form>
                 )}
               </Modal>
-              {loading && <p className="text-yellow-500 mb-4">Loading...</p>}
-              {error && <p className="text-red-500 mb-4">{error}</p>}
+              {loading && <p className="text-yellow-500 mb-4 animate-pulse text-center">Loading...</p>}
+              {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
               <div className="relative">
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                   <div className="grid grid-cols-3 gap-4 relative" ref={kanbanRef}>

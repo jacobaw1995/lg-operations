@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+
+const localizer = momentLocalizer(moment);
 
 type Contractor = {
   id: number;
@@ -13,114 +16,64 @@ type Contractor = {
   rate: number;
 };
 
-type ContractorHour = {
+type ContractorAssignment = {
   id: number;
   contractor_id: number;
   task_id: number;
-  hours: number;
-  payment: number;
-  date_worked: string;
-  task: { task: string };
+  project_id: number;
+  hours_worked: number;
+  payment_amount: number;
+  date: string;
 };
-
-const localizer = momentLocalizer(moment);
-
-function Modal({ isOpen, onClose, children, title }: { isOpen: boolean; onClose: () => void; children: React.ReactNode; title: string }) {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 p-6 rounded-xl shadow-xl w-1/2">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-yellow-500">{title}</h2>
-          <button onClick={onClose} className="text-red-500 hover:text-red-700 transition-colors duration-200">
-            Close
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 export default function Contractors() {
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [newContractor, setNewContractor] = useState({ name: '', contact: '', specialty: '', rate: 0 });
   const [editContractor, setEditContractor] = useState<Contractor | null>(null);
-  const [contractorHours, setContractorHours] = useState<ContractorHour[]>([]);
-  const [newHour, setNewHour] = useState({ contractor_id: 0, task_id: 0, hours: 0, date_worked: '' });
-  const [tasks, setTasks] = useState<{ id: number; task: string }[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isHoursModalOpen, setIsHoursModalOpen] = useState(false);
+  const [assignments, setAssignments] = useState<ContractorAssignment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [selectedContractor, setSelectedContractor] = useState<Contractor | null>(null);
+  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
 
-  const fetchContractors = async () => {
+  const fetchContractors = useCallback(async () => {
     setLoading(true);
     setError('');
-    const { data, error } = await supabase.from('contractors').select('*');
+    const { data, error } = await supabase.from('contractors').select('id, name, contact, specialty, rate');
     if (error) {
       setError('Failed to load contractors. Please try again.');
-      console.error('Fetch Contractors Error:', error);
+      console.error('Fetch Contractors Error:', error.message);
     } else {
       setContractors(data || []);
     }
     setLoading(false);
-  };
+  }, []);
 
-  const fetchTasks = async () => {
-    const { data, error } = await supabase.from('tasks').select('id, task');
+  const fetchAssignments = useCallback(async () => {
+    const { data, error } = await supabase.from('contractor_assignments').select('*');
     if (error) {
-      console.error('Fetch Tasks Error:', error);
+      console.error('Fetch Assignments Error:', error.message);
     } else {
-      setTasks(data || []);
+      setAssignments(data || []);
     }
-  };
-
-  const fetchContractorHours = async (contractorId: number) => {
-    setLoading(true);
-    setError('');
-    const { data, error } = await supabase
-      .from('contractor_hours')
-      .select('id, contractor_id, task_id, hours, payment, date_worked, task:tasks(task)')
-      .eq('contractor_id', contractorId);
-    if (error) {
-      setError('Failed to load contractor hours. Please try again.');
-      console.error('Fetch Contractor Hours Error:', error);
-    } else {
-      const mappedData = data.map((hour) => ({
-        ...hour,
-        task: Array.isArray(hour.task) ? hour.task[0] || { task: '' } : hour.task,
-      }));
-      setContractorHours(mappedData || []);
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchContractors();
-    fetchTasks();
   }, []);
 
   useEffect(() => {
-    if (selectedContractor) {
-      fetchContractorHours(selectedContractor.id);
-    }
-  }, [selectedContractor]);
+    fetchContractors();
+    fetchAssignments();
+  }, [fetchContractors, fetchAssignments]);
 
   const handleAddContractor = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!newContractor.name || !newContractor.contact || !newContractor.specialty || newContractor.rate <= 0) {
-      setError('All fields are required, and rate must be positive.');
+    if (!newContractor.name || !newContractor.contact || !newContractor.specialty || !newContractor.rate) {
+      setError('All fields are required.');
       return;
     }
     setLoading(true);
     const { data, error } = await supabase.from('contractors').insert([newContractor]).select();
     if (error) {
       setError('Failed to add contractor. Please try again.');
-      console.error('Contractor Insert Error:', error);
+      console.error('Add Contractor Error:', error.message);
     } else {
       console.log('Contractor Added:', data);
       setNewContractor({ name: '', contact: '', specialty: '', rate: 0 });
@@ -133,23 +86,23 @@ export default function Contractors() {
     e.preventDefault();
     if (!editContractor) return;
     setError('');
-    if (!editContractor.name || !editContractor.contact || !editContractor.specialty || editContractor.rate <= 0) {
-      setError('All fields are required, and rate must be positive.');
-      return;
-    }
     setLoading(true);
     const { data, error } = await supabase
       .from('contractors')
-      .update(editContractor)
+      .update({
+        name: editContractor.name,
+        contact: editContractor.contact,
+        specialty: editContractor.specialty,
+        rate: editContractor.rate,
+      })
       .eq('id', editContractor.id)
       .select();
     if (error) {
       setError('Failed to update contractor. Please try again.');
-      console.error('Contractor Update Error:', error);
+      console.error('Update Contractor Error:', error.message);
     } else {
       console.log('Contractor Updated:', data);
       setEditContractor(null);
-      setIsModalOpen(false);
       fetchContractors();
     }
     setLoading(false);
@@ -161,265 +114,239 @@ export default function Contractors() {
     const { error } = await supabase.from('contractors').delete().eq('id', contractorId);
     if (error) {
       setError('Failed to delete contractor. Please try again.');
-      console.error('Contractor Delete Error:', error);
+      console.error('Delete Contractor Error:', error.message);
     } else {
+      console.log('Contractor Deleted:', contractorId);
       fetchContractors();
     }
     setLoading(false);
   };
 
-  const handleAddHours = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleTrackHours = async (assignmentId: number, hours: number) => {
     setError('');
-    if (!newHour.contractor_id || !newHour.task_id || newHour.hours <= 0 || !newHour.date_worked) {
-      setError('All fields are required, and hours must be positive.');
-      return;
-    }
     setLoading(true);
-    const { data, error } = await supabase.from('contractor_hours').insert([newHour]).select();
+    const assignment = assignments.find((a) => a.id === assignmentId);
+    if (!assignment) return;
+    const payment_amount = hours * (contractors.find((c) => c.id === assignment.contractor_id)?.rate || 0);
+    const { data, error } = await supabase
+      .from('contractor_assignments')
+      .update({ hours_worked: hours, payment_amount })
+      .eq('id', assignmentId)
+      .select();
     if (error) {
-      setError('Failed to add hours. Please try again.');
-      console.error('Add Hours Error:', error);
+      setError('Failed to update hours and payment. Please try again.');
+      console.error('Update Hours Error:', error.message);
     } else {
-      console.log('Hours Added:', data);
-      setNewHour({ contractor_id: 0, task_id: 0, hours: 0, date_worked: '' });
-      setIsHoursModalOpen(false);
-      if (selectedContractor) {
-        fetchContractorHours(selectedContractor.id);
-      }
+      console.log('Hours and Payment Updated:', data);
+      fetchAssignments();
     }
     setLoading(false);
   };
 
-  const events = contractorHours.map((hour) => ({
-    title: `${hour.hours} hours on ${hour.task.task}`,
-    start: new Date(hour.date_worked),
-    end: new Date(hour.date_worked),
+  const calendarEvents = assignments.map((assignment) => ({
+    title: `Contractor ${contractors.find((c) => c.id === assignment.contractor_id)?.name || 'Unknown'} - Task ${assignment.task_id}`,
+    start: new Date(assignment.date),
+    end: new Date(assignment.date),
+    allDay: true,
+    resource: assignment,
   }));
 
   return (
     <div>
       <h1 className="text-3xl font-bold mb-8">Contractors</h1>
-      <form onSubmit={handleAddContractor} className="mb-8 bg-gray-800 p-6 rounded-xl shadow-lg">
-        <div className="grid grid-cols-4 gap-4">
-          <input
-            type="text"
-            placeholder="Name"
-            value={newContractor.name}
-            onChange={(e) => setNewContractor({ ...newContractor, name: e.target.value })}
-            className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
-            required
-          />
-          <input
-            type="text"
-            placeholder="Contact"
-            value={newContractor.contact}
-            onChange={(e) => setNewContractor({ ...newContractor, contact: e.target.value })}
-            className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
-            required
-          />
-          <input
-            type="text"
-            placeholder="Specialty"
-            value={newContractor.specialty}
-            onChange={(e) => setNewContractor({ ...newContractor, specialty: e.target.value })}
-            className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
-            required
-          />
-          <input
-            type="number"
-            placeholder="Rate ($/hr)"
-            value={newContractor.rate}
-            onChange={(e) => setNewContractor({ ...newContractor, rate: parseFloat(e.target.value) || 0 })}
-            className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
-            required
-          />
-          <button type="submit" className="btn-yellow" disabled={loading}>
-            {loading ? 'Adding...' : 'Add Contractor'}
-          </button>
-        </div>
-      </form>
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Edit Contractor">
-        {editContractor && (
-          <form onSubmit={handleEditContractor}>
-            <div className="grid grid-cols-2 gap-4">
+      {loading && <p className="text-yellow-500 mb-4 animate-pulse">Loading...</p>}
+      {error && <p className="text-red-500 mb-4">{error}</p>}
+
+      <div className="mb-4">
+        <button
+          onClick={() => setViewMode('table')}
+          className={`btn-yellow mr-2 ${viewMode === 'table' ? 'bg-yellow-600' : ''}`}
+        >
+          Table View
+        </button>
+        <button
+          onClick={() => setViewMode('calendar')}
+          className={`btn-yellow ${viewMode === 'calendar' ? 'bg-yellow-600' : ''}`}
+        >
+          Calendar View
+        </button>
+      </div>
+
+      {viewMode === 'table' ? (
+        <>
+          <form onSubmit={handleAddContractor} className="mb-8 bg-gray-800 p-6 rounded-xl shadow-lg">
+            <div className="grid grid-cols-4 gap-4">
               <input
                 type="text"
                 placeholder="Name"
-                value={editContractor.name}
-                onChange={(e) => setEditContractor({ ...editContractor, name: e.target.value })}
+                value={newContractor.name}
+                onChange={(e) => setNewContractor({ ...newContractor, name: e.target.value })}
                 className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
                 required
               />
               <input
                 type="text"
                 placeholder="Contact"
-                value={editContractor.contact}
-                onChange={(e) => setEditContractor({ ...editContractor, contact: e.target.value })}
+                value={newContractor.contact}
+                onChange={(e) => setNewContractor({ ...newContractor, contact: e.target.value })}
                 className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
                 required
               />
               <input
                 type="text"
                 placeholder="Specialty"
-                value={editContractor.specialty}
-                onChange={(e) => setEditContractor({ ...editContractor, specialty: e.target.value })}
+                value={newContractor.specialty}
+                onChange={(e) => setNewContractor({ ...newContractor, specialty: e.target.value })}
                 className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
                 required
               />
               <input
                 type="number"
                 placeholder="Rate ($/hr)"
-                value={editContractor.rate}
-                onChange={(e) => setEditContractor({ ...editContractor, rate: parseFloat(e.target.value) || 0 })}
+                value={newContractor.rate || ''}
+                onChange={(e) => setNewContractor({ ...newContractor, rate: parseFloat(e.target.value) || 0 })}
                 className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
                 required
               />
               <button type="submit" className="btn-yellow" disabled={loading}>
-                {loading ? 'Updating...' : 'Update Contractor'}
+                {loading ? 'Adding...' : 'Add Contractor'}
               </button>
             </div>
-            {error && <p className="text-red-500 mt-4">{error}</p>}
           </form>
-        )}
-      </Modal>
-      <Modal isOpen={isHoursModalOpen} onClose={() => setIsHoursModalOpen(false)} title="Log Contractor Hours">
-        <form onSubmit={handleAddHours}>
-          <div className="grid grid-cols-2 gap-4">
-            <select
-              value={newHour.contractor_id}
-              onChange={(e) => setNewHour({ ...newHour, contractor_id: parseInt(e.target.value) })}
-              className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
-              required
-            >
-              <option value="">Select Contractor</option>
-              {contractors.map((contractor) => (
-                <option key={contractor.id} value={contractor.id}>
-                  {contractor.name}
-                </option>
-              ))}
-            </select>
-            <select
-              value={newHour.task_id}
-              onChange={(e) => setNewHour({ ...newHour, task_id: parseInt(e.target.value) })}
-              className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
-              required
-            >
-              <option value="">Select Task</option>
-              {tasks.map((task) => (
-                <option key={task.id} value={task.id}>
-                  {task.task}
-                </option>
-              ))}
-            </select>
-            <input
-              type="number"
-              placeholder="Hours"
-              value={newHour.hours}
-              onChange={(e) => setNewHour({ ...newHour, hours: parseFloat(e.target.value) || 0 })}
-              className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
-              required
-            />
-            <input
-              type="date"
-              placeholder="Date Worked"
-              value={newHour.date_worked}
-              onChange={(e) => setNewHour({ ...newHour, date_worked: e.target.value })}
-              className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
-              required
-            />
-            <button type="submit" className="btn-yellow" disabled={loading}>
-              {loading ? 'Adding...' : 'Log Hours'}
-            </button>
-          </div>
-          {error && <p className="text-red-500 mt-4">{error}</p>}
-        </form>
-      </Modal>
-      {loading && <p className="text-yellow-500 mb-4 animate-pulse">Loading...</p>}
-      {error && <p className="text-red-500 mb-4">{error}</p>}
-      <table className="table mb-8 w-full">
-        <thead>
-          <tr>
-            <th className="text-left">Name</th>
-            <th className="text-left">Contact</th>
-            <th className="text-left">Specialty</th>
-            <th className="text-left">Rate ($/hr)</th>
-            <th className="text-left">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {contractors.map((contractor) => (
-            <tr key={contractor.id} className="hover:bg-gray-700 transition-colors duration-200">
-              <td>{contractor.name}</td>
-              <td>{contractor.contact}</td>
-              <td>{contractor.specialty}</td>
-              <td>${contractor.rate}</td>
-              <td>
-                <button
-                  onClick={() => {
-                    setEditContractor(contractor);
-                    setIsModalOpen(true);
-                  }}
-                  className="btn-yellow mr-2"
-                >
-                  Edit
+
+          {editContractor && (
+            <form onSubmit={handleEditContractor} className="mb-8 bg-gray-800 p-6 rounded-xl shadow-lg">
+              <div className="grid grid-cols-4 gap-4">
+                <input
+                  type="text"
+                  placeholder="Name"
+                  value={editContractor.name}
+                  onChange={(e) => setEditContractor({ ...editContractor, name: e.target.value })}
+                  className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Contact"
+                  value={editContractor.contact}
+                  onChange={(e) => setEditContractor({ ...editContractor, contact: e.target.value })}
+                  className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Specialty"
+                  value={editContractor.specialty}
+                  onChange={(e) => setEditContractor({ ...editContractor, specialty: e.target.value })}
+                  className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                  required
+                />
+                <input
+                  type="number"
+                  placeholder="Rate ($/hr)"
+                  value={editContractor.rate || ''}
+                  onChange={(e) => setEditContractor({ ...editContractor, rate: parseFloat(e.target.value) || 0 })}
+                  className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                  required
+                />
+                <button type="submit" className="btn-yellow" disabled={loading}>
+                  {loading ? 'Updating...' : 'Update Contractor'}
                 </button>
                 <button
-                  onClick={() => handleDeleteContractor(contractor.id)}
-                  className="btn-yellow bg-red-500 hover:bg-red-600 mr-2"
+                  type="button"
+                  onClick={() => setEditContractor(null)}
+                  className="btn-yellow bg-red-500 hover:bg-red-600"
                 >
-                  Delete
+                  Cancel
                 </button>
-                <button
-                  onClick={() => setSelectedContractor(contractor)}
-                  className="btn-yellow"
-                >
-                  View Details
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {selectedContractor && (
-        <div className="bg-gray-800 p-6 rounded-xl shadow-lg">
-          <h2 className="text-xl font-bold mb-4 text-yellow-500">{selectedContractor.name} - Details</h2>
-          <h3 className="text-lg font-semibold mb-2 text-white">Work Hours</h3>
-          <button
-            onClick={() => setIsHoursModalOpen(true)}
-            className="btn-yellow mb-4"
-          >
-            Log Hours
-          </button>
-          <table className="table mb-8 w-full">
+              </div>
+            </form>
+          )}
+
+          <table className="table w-full">
             <thead>
               <tr>
-                <th className="text-left">Task</th>
-                <th className="text-left">Hours</th>
-                <th className="text-left">Payment</th>
-                <th className="text-left">Date Worked</th>
+                <th className="text-left">Name</th>
+                <th className="text-left">Contact</th>
+                <th className="text-left">Specialty</th>
+                <th className="text-left">Rate ($/hr)</th>
+                <th className="text-left">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {contractorHours.map((hour) => (
-                <tr key={hour.id} className="hover:bg-gray-700 transition-colors duration-200">
-                  <td>{hour.task.task}</td>
-                  <td>{hour.hours}</td>
-                  <td>${hour.payment}</td>
-                  <td>{hour.date_worked}</td>
+              {contractors.map((contractor) => (
+                <tr key={contractor.id} className="hover:bg-gray-700 transition-colors duration-200">
+                  <td>{contractor.name}</td>
+                  <td>{contractor.contact}</td>
+                  <td>{contractor.specialty}</td>
+                  <td>${contractor.rate}</td>
+                  <td>
+                    <button
+                      onClick={() => setEditContractor(contractor)}
+                      className="btn-yellow mr-2"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteContractor(contractor.id)}
+                      className="btn-yellow bg-red-500 hover:bg-red-600"
+                      disabled={loading}
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <h3 className="text-lg font-semibold mb-2 text-white">Availability</h3>
+
+          <h2 className="text-xl font-bold mt-8 mb-4 text-yellow-500">Contractor Assignments</h2>
+          <table className="table w-full">
+            <thead>
+              <tr>
+                <th className="text-left">Contractor</th>
+                <th className="text-left">Task ID</th>
+                <th className="text-left">Project ID</th>
+                <th className="text-left">Date</th>
+                <th className="text-left">Hours Worked</th>
+                <th className="text-left">Payment Amount</th>
+                <th className="text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {assignments.map((assignment) => (
+                <tr key={assignment.id} className="hover:bg-gray-700 transition-colors duration-200">
+                  <td>{contractors.find((c) => c.id === assignment.contractor_id)?.name || 'Unknown'}</td>
+                  <td>{assignment.task_id}</td>
+                  <td>{assignment.project_id}</td>
+                  <td>{assignment.date}</td>
+                  <td>{assignment.hours_worked || 0}</td>
+                  <td>${assignment.payment_amount || 0}</td>
+                  <td>
+                    <input
+                      type="number"
+                      placeholder="Hours"
+                      defaultValue={assignment.hours_worked || 0}
+                      onBlur={(e) => handleTrackHours(assignment.id, parseFloat(e.target.value) || 0)}
+                      className="p-1 rounded bg-gray-700 text-white w-20 mr-2"
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      ) : (
+        <div className="bg-gray-800 p-4 rounded-xl shadow-lg">
+          <h2 className="text-xl font-bold mb-4 text-yellow-500">Contractor Schedule</h2>
           <Calendar
             localizer={localizer}
-            events={events}
+            events={calendarEvents}
             startAccessor="start"
             endAccessor="end"
             style={{ height: 500 }}
-            defaultView="month"
-            className="rounded-lg shadow-lg"
+            className="bg-gray-700 text-white"
+            onSelectEvent={(event) => console.log('Selected Event:', event.resource)}
           />
         </div>
       )}
