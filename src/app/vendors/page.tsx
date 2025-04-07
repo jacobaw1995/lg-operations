@@ -107,9 +107,6 @@ export default function Vendors() {
     if (!editVendor) return;
     setError('');
     setLoading(true);
-    const materials = editVendor.materials.join(',');
-    const pricingEntries = Object.values(editVendor.pricing).join(',');
-    const updatedVendor = { ...editVendor, materials, pricing: pricingEntries };
     const { data, error } = await supabase
       .from('vendors')
       .update({
@@ -195,8 +192,8 @@ export default function Vendors() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-8">Vendors</h1>
-      {loading && <p className="text-yellow-500 mb-4 animate-pulse">Loading...</p>}
-      {error && <p className="text-red-500 mb-4">{error}</p>}
+      {loading && <p className="text-yellow-500 mb-4 animate-pulse text-center">Loading...</p>}
+      {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
 
       <div className="mb-4">
         <button
@@ -222,7 +219,7 @@ export default function Vendors() {
                 placeholder="Name"
                 value={newVendor.name}
                 onChange={(e) => setNewVendor({ ...newVendor, name: e.target.value })}
-                className="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                className="p-2 rounded bg-gray-700 text-white focus-outline-none focus:ring-2 focus:ring-yellow-500"
                 required
               />
               <input
